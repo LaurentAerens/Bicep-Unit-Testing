@@ -84,8 +84,9 @@ fi
 # Function to normalize output for comparison
 normalize_output() {
     local output="$1"
-    # Remove the WARNING line about experimental feature
-    echo "$output" | grep -v "WARNING: The 'console' CLI command is an experimental feature" | sed '/^$/d'
+    # Remove the WARNING line about experimental feature and normalize line endings
+    # tr -d '\r' removes any carriage return characters (Windows CRLF -> LF)
+    echo "$output" | tr -d '\r' | grep -v "WARNING: The 'console' CLI command is an experimental feature" | sed '/^$/d'
 }
 
 # Function to run a single test

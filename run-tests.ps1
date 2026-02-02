@@ -44,6 +44,9 @@ $script:FailedTests = 0
 function Normalize-Output {
     param([string]$Output)
     
+    # Normalize line endings to Unix style (LF) by removing all CR characters
+    $Output = $Output -replace "`r", ""
+    
     # Remove the WARNING line about experimental feature and empty lines
     $lines = $Output -split "`n" | Where-Object { 
         $_ -notmatch "WARNING: The 'console' CLI command is an experimental feature" -and
