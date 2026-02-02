@@ -1,0 +1,6 @@
+{
+  "description": "Test custom resource naming function",
+  "bicepFile": "bicep-functions/example-functions.bicep",
+  "functionCall": "getResourceName('storage', 'myapp', 'prod')",
+  "expected": "'storage-myapp-prod'"
+}
