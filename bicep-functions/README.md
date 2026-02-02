@@ -70,5 +70,5 @@ Or use the test runner directly:
 
 ```bash
 # Create a test file and run it
-./run-tests.sh -v
+./framework/run-tests.sh -v
 ```

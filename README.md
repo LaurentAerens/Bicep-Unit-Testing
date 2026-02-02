@@ -16,6 +16,25 @@ Automated unit testing framework for Bicep functions using the new `bicep consol
 - ✅ **Verbose Mode**: Optional detailed output for debugging
 - ✅ **Backward Compatible**: Legacy single-test format still supported
 
+## Folder Structure
+
+```
+Bicep-Unit-Testing/
+├── .github/
+│   └── workflows/                # CI workflows (test.yml)
+├── azure-devops/
+│   └── azure-pipelines.yml       # Azure DevOps pipeline definition
+├── bicep-functions/              # Bicep helper and function source files
+├── framework/                     # Runner scripts and entrypoints + tooling for the framework
+│   ├── run-tests.ps1             # PowerShell runner (use pwsh)
+│   └── run-tests.sh              # Bash runner
+├── tests/                        # Test files (canonical)
+│   ├── complex-function/         # complex function examples (overlapping-subnets)
+│   └── ignored/                  # intentionally failing tests (CI ignores this folder)
+└── README.md
+```
+
+Keep `bicep-functions/` at repo root because many tests reference those paths directly.
 ## Prerequisites
 
 - [Bicep CLI](https://github.com/Azure/bicep) v0.40.0 or later (with console stdin/stdout support)
@@ -99,12 +118,12 @@ For backward compatibility, single-test files are still supported:
 
 **Linux/macOS:**
 ```bash
-./run-tests.sh
+./framework/run-tests.sh
 ```
 
 **Windows:**
 ```powershell
-.\run-tests.ps1
+.\framework\run-tests.ps1
 ```
 
 ## Test File Format
@@ -253,10 +272,10 @@ Run all tests in the default `./tests` directory:
 
 ```bash
 # Linux/macOS
-./run-tests.sh
+./framework/run-tests.sh
 
 # Windows
-.\run-tests.ps1
+.\framework\run-tests.ps1
 ```
 
 ### Advanced Options
@@ -264,37 +283,37 @@ Run all tests in the default `./tests` directory:
 **Specify a different test directory:**
 ```bash
 # Linux/macOS
-./run-tests.sh -d ./my-custom-tests
+./framework/run-tests.sh -d ./my-custom-tests
 
 # Windows
-.\run-tests.ps1 -TestDir ./my-custom-tests
+.\framework\run-tests.ps1 -TestDir ./my-custom-tests
 ```
 
 **Enable verbose output:**
 ```bash
 # Linux/macOS
-./run-tests.sh -v
+./framework/run-tests.sh -v
 
 # Windows
-.\run-tests.ps1 -VerboseOutput
+.\framework\run-tests.ps1 -VerboseOutput
 ```
 
 **Quiet mode (summary only):**
 ```bash
 # Linux/macOS
-./run-tests.sh -q
+./framework/run-tests.sh -q
 
 # Windows
-.\run-tests.ps1 -Quiet
+.\framework\run-tests.ps1 -Quiet
 ```
 
 **Help:**
 ```bash
 # Linux/macOS
-./run-tests.sh -h
+./framework/run-tests.sh -h
 
 # Windows
-Get-Help .\run-tests.ps1
+Get-Help .\framework\run-tests.ps1
 ```
 
 ## CI/CD Integration

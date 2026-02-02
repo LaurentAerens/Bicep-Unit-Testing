@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main, master ]
     paths-ignore:
-      - 'examples/ignored/**'
+      - 'tests/ignored/**'
   pull_request:
     branches: [ main, master ]
     paths-ignore:
-      - 'examples/ignored/**'
+      - 'tests/ignored/**'
   workflow_dispatch:
 
 permissions:
@@ -33,8 +33,8 @@ jobs:
     
     - name: Run tests (Bash)
       run: |
-        chmod +x ./run-tests.sh
-        ./run-tests.sh -v
+        chmod +x ./framework/run-tests.sh
+        ./framework/run-tests.sh -v
       
   test-windows:
     name: Test on Windows
@@ -58,7 +58,7 @@ jobs:
     - name: Run tests (PowerShell)
       run: |
         $env:PATH = "C:\bicep;$env:PATH"
-        pwsh ./run-tests.ps1 -VerboseOutput
+        pwsh ./framework/run-tests.ps1 -VerboseOutput
       shell: pwsh
 
   test-macos:
@@ -78,5 +78,5 @@ jobs:
     
     - name: Run tests (Bash)
       run: |
-        chmod +x ./run-tests.sh
-        ./run-tests.sh -v
+        chmod +x ./framework/run-tests.sh
+        ./framework/run-tests.sh -v
