@@ -1,0 +1,5 @@
+{
+  "description": "Description of what this test validates",
+  "input": "Bicep expression to test (e.g., length([1, 2, 3]))",
+  "expected": "Expected output from bicep console (e.g., 3)"
+}

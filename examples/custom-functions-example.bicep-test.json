@@ -1,0 +1,5 @@
+{
+  "description": "Example: Testing parseCidr with a /24 network",
+  "input": "parseCidr('192.168.1.0/24')",
+  "expected": "{\n  network: '192.168.1.0'\n  netmask: '255.255.255.0'\n  broadcast: '192.168.1.255'\n  firstUsable: '192.168.1.1'\n  lastUsable: '192.168.1.254'\n  cidr: 24\n}"
+}

@@ -1,0 +1,75 @@
+name: Run Bicep Function Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test-linux:
+    name: Test on Linux
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Bicep CLI
+      run: |
+        # Download and install latest Bicep CLI
+        curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+        chmod +x bicep
+        sudo mv bicep /usr/local/bin/bicep
+        bicep --version
+    
+    - name: Run tests (Bash)
+      run: |
+        chmod +x ./run-tests.sh
+        ./run-tests.sh -v
+      
+  test-windows:
+    name: Test on Windows
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Bicep CLI
+      run: |
+        # Download and install latest Bicep CLI
+        $InstallPath = "C:\bicep"
+        New-Item -ItemType Directory -Force -Path $InstallPath
+        Invoke-WebRequest -Uri "https://github.com/Azure/bicep/releases/latest/download/bicep-win-x64.exe" -OutFile "$InstallPath\bicep.exe"
+        $env:PATH = "$InstallPath;$env:PATH"
+        [Environment]::SetEnvironmentVariable("PATH", $env:PATH, "User")
+        bicep --version
+      shell: pwsh
+    
+    - name: Run tests (PowerShell)
+      run: |
+        $env:PATH = "C:\bicep;$env:PATH"
+        pwsh ./run-tests.ps1 -VerboseOutput
+      shell: pwsh
+
+  test-macos:
+    name: Test on macOS
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Bicep CLI
+      run: |
+        # Download and install latest Bicep CLI using Homebrew
+        brew tap azure/bicep
+        brew install bicep
+        bicep --version
+    
+    - name: Run tests (Bash)
+      run: |
+        chmod +x ./run-tests.sh
+        ./run-tests.sh -v

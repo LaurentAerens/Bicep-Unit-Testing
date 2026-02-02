@@ -1,0 +1,5 @@
+{
+  "description": "Test replace function",
+  "input": "replace('hello world', 'world', 'Bicep')",
+  "expected": "'hello Bicep'"
+}

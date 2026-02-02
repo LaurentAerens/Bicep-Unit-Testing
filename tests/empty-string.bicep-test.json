@@ -1,0 +1,5 @@
+{
+  "description": "Test edge case: empty string length",
+  "input": "length('')",
+  "expected": "0"
+}

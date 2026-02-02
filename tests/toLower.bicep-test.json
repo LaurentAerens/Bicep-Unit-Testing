@@ -1,0 +1,5 @@
+{
+  "description": "Test toLower function",
+  "input": "toLower('BICEP')",
+  "expected": "'bicep'"
+}

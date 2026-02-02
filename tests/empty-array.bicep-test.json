@@ -1,0 +1,5 @@
+{
+  "description": "Test edge case: empty array length",
+  "input": "length([])",
+  "expected": "0"
+}

@@ -1,0 +1,5 @@
+{
+  "description": "Test uniqueString function - generates consistent hash",
+  "input": "uniqueString('test')",
+  "expected": "'rbgf3xv4ufgzg'"
+}
