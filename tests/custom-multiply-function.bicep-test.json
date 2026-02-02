@@ -1,0 +1,6 @@
+{
+  "description": "Test custom multiply function from Bicep file",
+  "bicepFile": "bicep-functions/math-functions.bicep",
+  "functionCall": "multiply(6, 7)",
+  "expected": "42"
+}

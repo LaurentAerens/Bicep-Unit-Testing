@@ -1,0 +1,6 @@
+{
+  "description": "Test custom isEven function from Bicep file",
+  "bicepFile": "bicep-functions/math-functions.bicep",
+  "functionCall": "isEven(10)",
+  "expected": "true"
+}

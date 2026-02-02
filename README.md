@@ -5,7 +5,8 @@ Automated unit testing framework for Bicep functions using the new `bicep consol
 ## Features
 
 - ✅ **Automated Testing**: Run all your Bicep function tests automatically
-- ✅ **CI/CD Ready**: GitHub Actions workflow included for continuous testing
+- ✅ **Bicep File References**: Reference custom functions from .bicep files
+- ✅ **CI/CD Ready**: GitHub Actions and Azure DevOps pipelines included
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
 - ✅ **Simple Test Format**: JSON-based test definitions
 - ✅ **Detailed Reporting**: Clear pass/fail results with expected vs actual comparisons
@@ -45,6 +46,10 @@ $env:PATH = "$InstallPath;$env:PATH"
 
 ### 2. Create Test Files
 
+Test files can be created in two formats:
+
+#### Format 1: Inline Expression (for built-in functions)
+
 Create test files in the `tests` directory with the `.bicep-test.json` extension:
 
 ```json
@@ -52,6 +57,27 @@ Create test files in the `tests` directory with the `.bicep-test.json` extension
   "description": "Test concat function with strings",
   "input": "concat('hello', ' ', 'world')",
   "expected": "'hello world'"
+}
+```
+
+#### Format 2: Bicep File Reference (for custom functions)
+
+First, create a Bicep file with your custom functions:
+
+**bicep-functions/math-functions.bicep:**
+```bicep
+func add(a int, b int) int => a + b
+func multiply(a int, b int) int => a * b
+```
+
+Then create a test that references the Bicep file:
+
+```json
+{
+  "description": "Test custom add function",
+  "bicepFile": "bicep-functions/math-functions.bicep",
+  "functionCall": "add(5, 3)",
+  "expected": "8"
 }
 ```
 
@@ -69,7 +95,11 @@ Create test files in the `tests` directory with the `.bicep-test.json` extension
 
 ## Test File Format
 
-Test files must be named with the `.bicep-test.json` extension and contain:
+Test files must be named with the `.bicep-test.json` extension. Two formats are supported:
+
+### Format 1: Inline Expression
+
+For testing built-in Bicep functions:
 
 ```json
 {
@@ -78,6 +108,25 @@ Test files must be named with the `.bicep-test.json` extension and contain:
   "expected": "Expected output from bicep console"
 }
 ```
+
+### Format 2: Bicep File Reference
+
+For testing custom functions defined in Bicep files:
+
+```json
+{
+  "description": "Human-readable test description",
+  "bicepFile": "path/to/functions.bicep",
+  "functionCall": "myFunction(param1, param2)",
+  "expected": "Expected output from bicep console"
+}
+```
+
+**Benefits of Bicep File Reference:**
+- Separate function definitions from test cases
+- Reuse function definitions across multiple tests
+- Test custom Bicep functions without repeating definitions
+- Better organization for complex function libraries
 
 ### Example Test Files
 
@@ -175,6 +224,25 @@ The workflow runs on:
 - Pull requests to `main` or `master` branches
 - Manual workflow dispatch
 
+### Azure DevOps
+
+An Azure DevOps pipeline is included in `azure-pipelines.yml` that automatically:
+- Runs tests on Linux, Windows, and macOS
+- Installs Bicep CLI
+- Executes all tests
+- Publishes test results
+
+The pipeline runs on:
+- Push to `main` or `master` branches
+- Pull requests to `main` or `master` branches
+
+**Setup Instructions:**
+1. Go to Azure DevOps → Pipelines → New Pipeline
+2. Select your repository
+3. Choose "Existing Azure Pipelines YAML file"
+4. Select `/azure-pipelines.yml`
+5. Run the pipeline
+
 ### Other CI/CD Systems
 
 The test runners are simple scripts that return:
@@ -182,13 +250,6 @@ The test runners are simple scripts that return:
 - Exit code 1 on failure (one or more tests fail)
 
 Example integration:
-
-**Azure DevOps:**
-```yaml
-- script: |
-    ./run-tests.sh
-  displayName: 'Run Bicep Function Tests'
-```
 
 **GitLab CI:**
 ```yaml
@@ -204,15 +265,52 @@ sh './run-tests.sh'
 
 ## Example Test Scenarios
 
-### Testing Custom Functions
+### Testing Built-in Functions
 
-If you have custom Bicep functions, you can test them:
+Test any built-in Bicep function using inline expressions:
 
 ```json
 {
-  "description": "Test custom IP calculation",
+  "description": "Test parseCidr function",
   "input": "parseCidr('192.168.1.0/24')",
   "expected": "{\n  network: '192.168.1.0'\n  netmask: '255.255.255.0'\n  broadcast: '192.168.1.255'\n  firstUsable: '192.168.1.1'\n  lastUsable: '192.168.1.254'\n  cidr: 24\n}"
+}
+```
+
+### Testing Custom Functions
+
+**Step 1:** Create a Bicep file with your custom functions
+
+**bicep-functions/naming.bicep:**
+```bicep
+// Function to generate standardized resource names
+func getResourceName(resourceType string, appName string, env string) string => 
+  toLower('${resourceType}-${appName}-${env}')
+
+// Function to validate environment
+func isValidEnvironment(env string) bool => 
+  contains(['dev', 'test', 'prod'], env)
+```
+
+**Step 2:** Create tests referencing the Bicep file
+
+**tests/naming-dev-env.bicep-test.json:**
+```json
+{
+  "description": "Test resource name generation for dev environment",
+  "bicepFile": "bicep-functions/naming.bicep",
+  "functionCall": "getResourceName('storage', 'myapp', 'dev')",
+  "expected": "'storage-myapp-dev'"
+}
+```
+
+**tests/validate-env.bicep-test.json:**
+```json
+{
+  "description": "Test environment validation",
+  "bicepFile": "bicep-functions/naming.bicep",
+  "functionCall": "isValidEnvironment('prod')",
+  "expected": "true"
 }
 ```
 
@@ -240,8 +338,9 @@ If you have custom Bicep functions, you can test them:
 
 1. The test runner reads all `.bicep-test.json` files from the test directory
 2. For each test:
-   - Extracts the `input` expression
-   - Pipes it to `bicep console` via stdin
+   - **Inline format**: Extracts the `input` expression
+   - **Bicep file format**: Loads function definitions from `bicepFile` and combines with `functionCall`
+   - Pipes the expression to `bicep console` via stdin
    - Captures the output from stdout
    - Compares the output with the `expected` value
    - Reports pass/fail status

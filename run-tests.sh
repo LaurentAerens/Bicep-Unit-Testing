@@ -98,7 +98,9 @@ run_test() {
     fi
     
     # Read test file
-    local input=$(jq -r '.input' "$test_file")
+    local input=$(jq -r '.input // "null"' "$test_file")
+    local bicep_file=$(jq -r '.bicepFile // "null"' "$test_file")
+    local function_call=$(jq -r '.functionCall // "null"' "$test_file")
     local expected=$(jq -r '.expected' "$test_file")
     local description=$(jq -r '.description // ""' "$test_file")
     
@@ -106,8 +108,42 @@ run_test() {
         echo "  Description: $description"
     fi
     
-    if [ "$VERBOSE" = "true" ]; then
-        echo "  Input: $input"
+    # Determine input based on test format
+    if [ "$bicep_file" != "null" ] && [ "$function_call" != "null" ]; then
+        # Using bicepFile + functionCall format
+        if [ ! -f "$bicep_file" ]; then
+            echo -e "  ${RED}✗ FAILED${NC}"
+            echo "  Error: Bicep file not found: $bicep_file"
+            ((FAILED_TESTS++))
+            return 1
+        fi
+        
+        # Extract function definitions from the bicep file
+        local bicep_content=$(cat "$bicep_file")
+        
+        # Combine function definitions with function call
+        input=$(cat << BICEP_INPUT
+$bicep_content
+$function_call
+BICEP_INPUT
+)
+        
+        if [ "$VERBOSE" = "true" ]; then
+            echo "  Bicep file: $bicep_file"
+            echo "  Function call: $function_call"
+        fi
+    else
+        # Using inline input format
+        if [ "$input" = "null" ]; then
+            echo -e "  ${RED}✗ FAILED${NC}"
+            echo "  Error: Test must have either 'input' or 'bicepFile' + 'functionCall'"
+            ((FAILED_TESTS++))
+            return 1
+        fi
+        
+        if [ "$VERBOSE" = "true" ]; then
+            echo "  Input: $input"
+        fi
     fi
     
     # Run bicep console

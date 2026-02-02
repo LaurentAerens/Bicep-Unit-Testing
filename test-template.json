@@ -1,5 +1,7 @@
 {
   "description": "Description of what this test validates",
-  "input": "Bicep expression to test (e.g., length([1, 2, 3]))",
+  "input": "Bicep expression to test (e.g., length([1, 2, 3])) - OR use bicepFile + functionCall",
+  "bicepFile": "(Optional) Path to .bicep file containing function definitions (relative to repo root)",
+  "functionCall": "(Optional) Function call expression when using bicepFile (e.g., myFunc(param1, param2))",
   "expected": "Expected output from bicep console (e.g., 3)"
 }

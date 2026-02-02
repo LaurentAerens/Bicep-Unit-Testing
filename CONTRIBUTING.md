@@ -13,6 +13,10 @@ Thank you for your interest in contributing! This guide will help you add new te
 
 ### Test File Format
 
+Two formats are supported:
+
+#### Format 1: Inline Expression (for built-in functions)
+
 ```json
 {
   "description": "Clear description of what you're testing",
@@ -20,6 +24,23 @@ Thank you for your interest in contributing! This guide will help you add new te
   "expected": "The expected output from bicep console"
 }
 ```
+
+#### Format 2: Bicep File Reference (for custom functions)
+
+```json
+{
+  "description": "Clear description of what you're testing",
+  "bicepFile": "path/to/functions.bicep",
+  "functionCall": "myFunction(param1, param2)",
+  "expected": "The expected output from bicep console"
+}
+```
+
+**When to use each format:**
+- Use **inline expression** for testing built-in Bicep functions
+- Use **Bicep file reference** for testing custom functions defined in `.bicep` files
+  - This allows reusing function definitions across multiple tests
+  - Better organization for complex function libraries
 
 ### Using Helper Scripts
 
@@ -39,6 +60,8 @@ This will show you exactly what to put in the `expected` field.
 
 ### Example Workflow
 
+**For Built-in Functions:**
+
 1. **Test your expression manually:**
    ```bash
    echo "length([1, 2, 3])" | bicep console
@@ -55,6 +78,34 @@ This will show you exactly what to put in the `expected` field.
      "description": "Test length of array with 3 elements",
      "input": "length([1, 2, 3])",
      "expected": "3"
+   }
+   ```
+
+4. **Run the tests:**
+   ```bash
+   ./run-tests.sh
+   ```
+
+**For Custom Functions:**
+
+1. **Create a Bicep file with your functions** (`bicep-functions/my-functions.bicep`):
+   ```bicep
+   func add(a int, b int) int => a + b
+   func multiply(a int, b int) int => a * b
+   ```
+
+2. **Test the function manually:**
+   ```bash
+   cat bicep-functions/my-functions.bicep <(echo "add(5, 3)") | bicep console
+   ```
+
+3. **Create your test file** (`tests/my-add-test.bicep-test.json`):
+   ```json
+   {
+     "description": "Test custom add function",
+     "bicepFile": "bicep-functions/my-functions.bicep",
+     "functionCall": "add(5, 3)",
+     "expected": "8"
    }
    ```
 
@@ -83,6 +134,11 @@ Consider adding tests for:
 
 ### Network Functions
 - `parseCidr()`, `cidrSubnet()`, `cidrHost()`
+
+### Custom Functions
+- Define custom functions in `.bicep` files in the `bicep-functions` directory
+- Test naming conventions, validation logic, and helper utilities
+- Examples: resource naming functions, environment validators, tag generators
 
 ### Utility Functions
 - `uniqueString()`, `guid()`, `base64()`

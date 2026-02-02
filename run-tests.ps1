@@ -66,7 +66,9 @@ function Run-Test {
     
     # Read test file
     $testData = Get-Content $TestFile -Raw | ConvertFrom-Json
-    $input = $testData.input
+    $inputExpr = $testData.input
+    $bicepFile = $testData.bicepFile
+    $functionCall = $testData.functionCall
     $expected = $testData.expected
     $description = $testData.description
     
@@ -74,13 +76,46 @@ function Run-Test {
         Write-Host "  Description: $description"
     }
     
-    if ($VerboseOutput) {
-        Write-Host "  Input: $input"
+    # Determine input based on test format
+    if ($bicepFile -and $functionCall) {
+        # Using bicepFile + functionCall format
+        if (-not (Test-Path $bicepFile)) {
+            Write-Host "  ✗ FAILED" -ForegroundColor Red
+            Write-Host "  Error: Bicep file not found: $bicepFile"
+            $script:FailedTests++
+            return $false
+        }
+        
+        # Extract function definitions from the bicep file
+        $bicepContent = Get-Content $bicepFile -Raw
+        
+        # Combine function definitions with function call
+        $inputExpr = @"
+$bicepContent
+$functionCall
+"@
+        
+        if ($VerboseOutput) {
+            Write-Host "  Bicep file: $bicepFile"
+            Write-Host "  Function call: $functionCall"
+        }
+    } else {
+        # Using inline input format
+        if (-not $inputExpr) {
+            Write-Host "  ✗ FAILED" -ForegroundColor Red
+            Write-Host "  Error: Test must have either 'input' or 'bicepFile' + 'functionCall'"
+            $script:FailedTests++
+            return $false
+        }
+        
+        if ($VerboseOutput) {
+            Write-Host "  Input: $inputExpr"
+        }
     }
     
     # Run bicep console
     try {
-        $actualOutput = $input | bicep console 2>&1 | Out-String
+        $actualOutput = $inputExpr | bicep console 2>&1 | Out-String
         $actual = Normalize-Output $actualOutput
         $expectedNormalized = Normalize-Output $expected
         
