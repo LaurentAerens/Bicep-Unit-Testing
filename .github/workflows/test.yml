@@ -22,7 +22,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
     - name: Install Bicep CLI
       run: |
         # Download and install latest Bicep CLI
@@ -30,30 +29,47 @@ jobs:
         chmod +x bicep
         sudo mv bicep /usr/local/bin/bicep
         bicep --version
-    
-    - name: Run tests (Bash)
+
+    - name: Run tests (PowerShell on Linux)
+      shell: pwsh
       run: |
-        chmod +x ./framework/run-tests.sh
-        ./framework/run-tests.sh -v | tee test_output.txt
+        $env:PATH = "/usr/local/bin:$env:PATH"
+        pwsh -Command "& { ./framework/run-tests.ps1 -VerboseOutput 2>&1 | Tee-Object -FilePath test_output.txt }"
       continue-on-error: true
 
-    - name: Evaluate test failures
+    - name: Evaluate test failures (PowerShell)
+      shell: pwsh
       run: |
-        # Extract the failed count from the test output and treat exactly 11 failures as success
-        failures=$(grep -Eo 'Failed:[[:space:]]+[0-9]+' test_output.txt | awk '{print $2}')
-        echo "Failures=$failures"
-        if [ "${failures}" = "11" ]; then
-          echo "Exactly 11 failures — treating job as success"
+        $content = Get-Content -Raw -Path test_output.txt
+        $failures = $null
+
+        $m = [regex]::Match($content, 'Failed:\s*(\d+)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+        if ($m.Success) {
+          $failures = [int]$m.Groups[1].Value
+        } else {
+          $lines = $content -split "\r?\n"
+          foreach ($line in $lines) {
+            if ($line -match 'Failed[:\s]*([0-9]+)') {
+              $failures = [int]$matches[1]
+              break
+            }
+          }
+        }
+
+        if ($null -eq $failures) {
+          Write-Error 'Could not determine failure count from test output'
+          exit 1
+        }
+
+        Write-Host "Failures=$failures"
+        if ($failures -eq 11) {
+          Write-Host 'Exactly 11 failures — treating job as success'
           exit 0
-        fi
-        if [ -z "${failures}" ]; then
-          echo "Could not determine failure count; failing job" >&2
+        }
+        if ($failures -gt 0) {
+          Write-Error "Unexpected failure count: $failures; failing job"
           exit 1
-        fi
-        if [ "${failures}" -gt 0 ]; then
-          echo "Unexpected failure count: ${failures}; failing job" >&2
-          exit 1
-        fi
+        }
         exit 0
       
   test-windows:
@@ -119,42 +135,4 @@ jobs:
         }
         exit 0
 
-  test-macos:
-    name: Test on macOS
-    runs-on: macos-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Install Bicep CLI
-      run: |
-        # Download and install latest Bicep CLI using Homebrew
-        brew tap azure/bicep
-        brew install bicep
-        bicep --version
-    
-    - name: Run tests (Bash)
-      run: |
-        chmod +x ./framework/run-tests.sh
-        ./framework/run-tests.sh -v | tee test_output.txt
-      continue-on-error: true
-
-    - name: Evaluate test failures
-      run: |
-        # Extract the failed count from the test output and treat exactly 11 failures as success
-        failures=$(grep -Eo 'Failed:[[:space:]]+[0-9]+' test_output.txt | awk '{print $2}')
-        echo "Failures=$failures"
-        if [ "${failures}" = "11" ]; then
-          echo "Exactly 11 failures — treating job as success"
-          exit 0
-        fi
-        if [ -z "${failures}" ]; then
-          echo "Could not determine failure count; failing job" >&2
-          exit 1
-        fi
-        if [ "${failures}" -gt 0 ]; then
-          echo "Unexpected failure count: ${failures}; failing job" >&2
-          exit 1
-        fi
-        exit 0
+  # macOS job removed — workflow now runs on Linux and Windows (PowerShell)

@@ -26,8 +26,7 @@ Bicep-Unit-Testing/
 │   └── azure-pipelines.yml       # Azure DevOps pipeline definition
 ├── bicep-functions/              # Bicep helper and function source files
 ├── framework/                     # Runner scripts and entrypoints + tooling for the framework
-│   ├── run-tests.ps1             # PowerShell runner (use pwsh)
-│   └── run-tests.sh              # Bash runner
+│   └── run-tests.ps1             # PowerShell runner (use pwsh)
 ├── tests/                        # Test files (canonical)
 │   ├── complex-function/         # complex function examples (overlapping-subnets)
 │   └── ignored/                  # intentionally failing tests (CI ignores this folder)
