@@ -1,0 +1,47 @@
+{
+  "description": "Tests for overlapping-subnets.bicep complex helper functions",
+  "tests": [
+    {
+      "name": "_getMaxHosts for /24",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_getMaxHosts(24)",
+      "shouldBe": "254"
+    },
+    {
+      "name": "_ipv4ToInt conversion",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_ipv4ToInt('10.0.0.1')",
+      "shouldBe": "167772161"
+    },
+    {
+      "name": "_hasOverlap returns true for overlapping ranges",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_hasOverlap({ start: 10, end: 20, cidr: '10.0.0.0/28' }, { start: 15, end: 25, cidr: '10.0.0.16/28' })",
+      "shouldBe": "true"
+    },
+    {
+      "name": "_hasOverlap returns false for non-overlapping ranges",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_hasOverlap({ start: 10, end: 20, cidr: '10.0.0.0/28' }, { start: 21, end: 30, cidr: '10.0.0.32/28' })",
+      "shouldBe": "false"
+    },
+    {
+      "name": "_rangesHaveOverlap detects any overlap in array",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_rangesHaveOverlap([ { start: 10, end: 20, cidr: 'a' }, { start: 30, end: 40, cidr: 'b' }, { start: 15, end: 25, cidr: 'c' } ])",
+      "shouldBe": "true"
+    },
+    {
+      "name": "_rangesHaveOverlap on non-overlapping list",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_rangesHaveOverlap([ { start: 10, end: 20, cidr: 'a' }, { start: 21, end: 29, cidr: 'b' }, { start: 30, end: 40, cidr: 'c' } ])",
+      "shouldBe": "false"
+    },
+    {
+      "name": "_getMaxHosts sanity: /30 -> 2",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_getMaxHosts(30)",
+      "shouldBe": "2"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "description": "Additional failing subnet edge-case examples (ignored by CI)",
+  "tests": [
+    {
+      "name": "Intentional fail - wrong _getMaxHosts for /24",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_getMaxHosts(24)",
+      "shouldBe": "999"
+    },
+    {
+      "name": "Intentional fail - wrong _ipv4ToInt value",
+      "bicepFile": "bicep-functions/overlapping-subnets.bicep",
+      "functionCall": "_ipv4ToInt('10.0.0.2')",
+      "shouldBe": "999999"
+    }
+  ]
+}

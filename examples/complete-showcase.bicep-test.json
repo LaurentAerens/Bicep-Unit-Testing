@@ -1,0 +1,57 @@
+{
+  "description": "Complete example showcasing all assertion types and test formats",
+  "tests": [
+    {
+      "name": "Exact match - string concatenation",
+      "input": "concat('hello', '-', 'world')",
+      "shouldBe": "'hello-world'"
+    },
+    {
+      "name": "Exact match - array length",
+      "input": "length([1, 2, 3, 4])",
+      "shouldBe": "4"
+    },
+    {
+      "name": "Should not be - empty string check",
+      "input": "concat('a', 'b', 'c')",
+      "shouldNotBe": "''"
+    },
+    {
+      "name": "Should not be - zero length check",
+      "input": "length([1, 2, 3])",
+      "shouldNotBe": "0"
+    },
+    {
+      "name": "Should not be - null check",
+      "input": "toUpper('test')",
+      "shouldNotBe": "null"
+    },
+    {
+      "name": "Contains - substring in result",
+      "input": "concat('prefix-', 'value', '-suffix')",
+      "shouldContain": "value"
+    },
+    {
+      "name": "Contains - partial match in complex object",
+      "input": "parseCidr('192.168.1.0/24')",
+      "shouldContain": "cidr: 24"
+    },
+    {
+      "name": "Contains - case sensitive check",
+      "input": "toLower('TESTING')",
+      "shouldContain": "test"
+    },
+    {
+      "name": "Using bicepFile - exact match",
+      "bicepFile": "bicep-functions/math-functions.bicep",
+      "functionCall": "add(10, 5)",
+      "shouldBe": "15"
+    },
+    {
+      "name": "Using bicepFile - should not be zero",
+      "bicepFile": "bicep-functions/math-functions.bicep",
+      "functionCall": "multiply(3, 7)",
+      "shouldNotBe": "0"
+    }
+  ]
+}

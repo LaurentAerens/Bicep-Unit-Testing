@@ -1,0 +1,25 @@
+{
+  "description": "Example showing how different assertion types report failures (moved to ignored folder)",
+  "tests": [
+    {
+      "name": "Intentional fail - incorrect shouldBe for length",
+      "input": "length([1, 2, 3])",
+      "shouldBe": "4"
+    },
+    {
+      "name": "This will fail - incorrect shouldBe",
+      "input": "length([1, 2, 3])",
+      "shouldBe": "5"
+    },
+    {
+      "name": "This will fail - shouldNotBe matches actual",
+      "input": "toUpper('test')",
+      "shouldNotBe": "'TEST'"
+    },
+    {
+      "name": "This will fail - shouldContain not found",
+      "input": "concat('hello', 'world')",
+      "shouldContain": "xyz"
+    }
+  ]
+}

@@ -89,32 +89,35 @@ normalize_output() {
     echo "$output" | tr -d '\r' | grep -v "WARNING: The 'console' CLI command is an experimental feature" | sed '/^$/d'
 }
 
-# Function to run a single test
-run_test() {
-    local test_file="$1"
-    local test_name=$(basename "$test_file" .bicep-test.json)
+# Function to run a single test case
+run_single_test() {
+    local test="$1"
+    local test_name="$2"
+    local test_index="$3"
     
-    if [ "$QUIET_MODE" != "true" ]; then
-        echo -e "\n${YELLOW}Running test: $test_name${NC}"
+    # Parse test case fields using jq
+    local input=$(echo "$test" | jq -r '.input // "null"')
+    local bicep_file=$(echo "$test" | jq -r '.bicepFile // "null"')
+    local function_call=$(echo "$test" | jq -r '.functionCall // "null"')
+    local should_be=$(echo "$test" | jq -r '.shouldBe // "null"')
+    local should_not_be=$(echo "$test" | jq -r '.shouldNotBe // "null"')
+    local should_contain=$(echo "$test" | jq -r '.shouldContain // "null"')
+    local test_display_name=$(echo "$test" | jq -r '.name // "null"')
+    
+    if [ "$test_display_name" = "null" ]; then
+        test_display_name="Test $test_index"
     fi
     
-    # Read test file
-    local input=$(jq -r '.input // "null"' "$test_file")
-    local bicep_file=$(jq -r '.bicepFile // "null"' "$test_file")
-    local function_call=$(jq -r '.functionCall // "null"' "$test_file")
-    local expected=$(jq -r '.expected' "$test_file")
-    local description=$(jq -r '.description // ""' "$test_file")
-    
-    if [ "$VERBOSE" = "true" ] && [ ! -z "$description" ]; then
-        echo "  Description: $description"
+    if [ "$QUIET_MODE" != "true" ]; then
+        echo -e "  ${YELLOW}[$test_index]${NC} $test_display_name"
     fi
     
     # Determine input based on test format
     if [ "$bicep_file" != "null" ] && [ "$function_call" != "null" ]; then
         # Using bicepFile + functionCall format
         if [ ! -f "$bicep_file" ]; then
-            echo -e "  ${RED}✗ FAILED${NC}"
-            echo "  Error: Bicep file not found: $bicep_file"
+            echo -e "    ${RED}✗ FAILED${NC}"
+            echo "    Error: Bicep file not found: $bicep_file"
             ((FAILED_TESTS++))
             return 1
         fi
@@ -130,20 +133,20 @@ BICEP_INPUT
 )
         
         if [ "$VERBOSE" = "true" ]; then
-            echo "  Bicep file: $bicep_file"
-            echo "  Function call: $function_call"
+            echo "    Bicep file: $bicep_file"
+            echo "    Function call: $function_call"
         fi
     else
         # Using inline input format
         if [ "$input" = "null" ]; then
-            echo -e "  ${RED}✗ FAILED${NC}"
-            echo "  Error: Test must have either 'input' or 'bicepFile' + 'functionCall'"
+            echo -e "    ${RED}✗ FAILED${NC}"
+            echo "    Error: Test must have either 'input' or 'bicepFile' + 'functionCall'"
             ((FAILED_TESTS++))
             return 1
         fi
         
         if [ "$VERBOSE" = "true" ]; then
-            echo "  Input: $input"
+            echo "    Input: $input"
         fi
     fi
     
@@ -153,26 +156,127 @@ BICEP_INPUT
     
     # Normalize outputs
     local actual=$(normalize_output "$actual_output")
-    local expected_normalized=$(normalize_output "$expected")
     
     if [ "$VERBOSE" = "true" ]; then
-        echo "  Expected: $expected_normalized"
-        echo "  Actual: $actual"
+        echo "    Actual: $actual"
     fi
     
-    # Compare outputs
-    if [ "$actual" = "$expected_normalized" ]; then
+    # Determine which assertion to use
+    local passed=false
+    local assertion_type=""
+    local assertion_value=""
+    
+    if [ "$should_be" != "null" ]; then
+        # shouldBe: exact match
+        assertion_type="shouldBe"
+        assertion_value=$(normalize_output "$should_be")
+        if [ "$actual" = "$assertion_value" ]; then
+            passed=true
+        fi
+    elif [ "$should_not_be" != "null" ]; then
+        # shouldNotBe: must not match
+        assertion_type="shouldNotBe"
+        assertion_value=$(normalize_output "$should_not_be")
+        if [ "$actual" != "$assertion_value" ]; then
+            passed=true
+        fi
+    elif [ "$should_contain" != "null" ]; then
+        # shouldContain: substring match
+        assertion_type="shouldContain"
+        assertion_value=$(normalize_output "$should_contain")
+        if [[ "$actual" == *"$assertion_value"* ]]; then
+            passed=true
+        fi
+    else
+        echo -e "    ${RED}✗ FAILED${NC}"
+        echo "    Error: Test must have one of: shouldBe, shouldNotBe, or shouldContain"
+        ((FAILED_TESTS++))
+        return 1
+    fi
+    
+    # Report results
+    if [ "$passed" = true ]; then
         if [ "$QUIET_MODE" != "true" ]; then
-            echo -e "  ${GREEN}✓ PASSED${NC}"
+            echo -e "    ${GREEN}✓ PASSED${NC}"
         fi
         ((PASSED_TESTS++))
         return 0
     else
-        echo -e "  ${RED}✗ FAILED${NC}"
-        echo "  Expected: $expected_normalized"
-        echo "  Actual:   $actual"
+        echo -e "    ${RED}✗ FAILED${NC}"
+        case "$assertion_type" in
+            shouldBe)
+                echo "    Expected: $assertion_value"
+                echo "    Actual:   $actual"
+                ;;
+            shouldNotBe)
+                echo "    Should NOT be: $assertion_value"
+                echo "    But actual was: $actual"
+                ;;
+            shouldContain)
+                echo "    Should contain: $assertion_value"
+                echo "    Actual:         $actual"
+                ;;
+        esac
         ((FAILED_TESTS++))
         return 1
+    fi
+}
+
+# Function to run a test file (may contain multiple tests)
+run_test() {
+    local test_file="$1"
+    local test_name=$(basename "$test_file" .bicep-test.json)
+    
+    if [ "$QUIET_MODE" != "true" ]; then
+        echo -e "\n${YELLOW}Running test: $test_name${NC}"
+    fi
+    
+    # Read test file
+    local description=$(jq -r '.description // ""' "$test_file")
+    
+    if [ "$VERBOSE" = "true" ] && [ ! -z "$description" ]; then
+        echo "  Description: $description"
+    fi
+    
+    # Check if this is the new multi-test format or legacy format
+    local has_tests_array=$(jq 'has("tests")' "$test_file")
+    
+    if [ "$has_tests_array" = "true" ]; then
+        # New format: multiple tests in array
+        local test_count=$(jq '.tests | length' "$test_file")
+        
+        if [ "$test_count" = "0" ]; then
+            echo -e "  ${YELLOW}✗ WARNING: No tests defined in file${NC}"
+            return 0
+        fi
+        
+        for ((i=0; i<test_count; i++)); do
+            ((TOTAL_TESTS++))
+            local test_case=$(jq ".tests[$i]" "$test_file")
+            run_single_test "$test_case" "$test_name" $((i+1)) || true
+        done
+    else
+        # Legacy format: single test in root
+        ((TOTAL_TESTS++))
+        
+        # Convert legacy format to new format for processing
+        local input=$(jq -r '.input // "null"' "$test_file")
+        local bicep_file=$(jq -r '.bicepFile // "null"' "$test_file")
+        local function_call=$(jq -r '.functionCall // "null"' "$test_file")
+        local expected=$(jq -r '.expected' "$test_file")
+        
+        # Create a JSON object with legacy values mapped to new format
+        local legacy_test=$(cat << LEGACY_JSON
+{
+  "input": $([[ "$input" != "null" ]] && echo "\"$input\"" || echo "null"),
+  "bicepFile": $([[ "$bicep_file" != "null" ]] && echo "\"$bicep_file\"" || echo "null"),
+  "functionCall": $([[ "$function_call" != "null" ]] && echo "\"$function_call\"" || echo "null"),
+  "shouldBe": "$expected"
+}
+LEGACY_JSON
+)
+        
+        run_single_test "$legacy_test" "$test_name" 1 || true
     fi
 }
 
@@ -194,8 +298,7 @@ fi
 
 # Run all tests
 for test_file in $TEST_FILES; do
-    ((TOTAL_TESTS++))
-    run_test "$test_file" || true
+    run_test "$test_file"
 done
 
 # Print summary

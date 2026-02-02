@@ -1,0 +1,17 @@
+{
+  "description": "Additional failing math examples (ignored by CI)",
+  "tests": [
+    {
+      "name": "Intentional fail - add(1,2) expected 4",
+      "bicepFile": "bicep-functions/math-functions.bicep",
+      "functionCall": "add(1, 2)",
+      "shouldBe": "4"
+    },
+    {
+      "name": "Intentional fail - multiply(2,3) shouldNotBe 6",
+      "bicepFile": "bicep-functions/math-functions.bicep",
+      "functionCall": "multiply(2, 3)",
+      "shouldNotBe": "6"
+    }
+  ]
+}

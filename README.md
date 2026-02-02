@@ -5,6 +5,8 @@ Automated unit testing framework for Bicep functions using the new `bicep consol
 ## Features
 
 - ✅ **Automated Testing**: Run all your Bicep function tests automatically
+- ✅ **Multiple Tests per File**: Define multiple test cases in a single test file
+- ✅ **Flexible Assertions**: Use `shouldBe`, `shouldNotBe`, or `shouldContain` assertion types
 - ✅ **Bicep File References**: Reference custom functions from .bicep files
 - ✅ **CI/CD Ready**: GitHub Actions and Azure DevOps pipelines included
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
@@ -12,6 +14,7 @@ Automated unit testing framework for Bicep functions using the new `bicep consol
 - ✅ **Detailed Reporting**: Clear pass/fail results with expected vs actual comparisons
 - ✅ **Parallel Execution**: Fast test execution
 - ✅ **Verbose Mode**: Optional detailed output for debugging
+- ✅ **Backward Compatible**: Legacy single-test format still supported
 
 ## Prerequisites
 
@@ -46,38 +49,49 @@ $env:PATH = "$InstallPath;$env:PATH"
 
 ### 2. Create Test Files
 
-Test files can be created in two formats:
+Test files support two formats: a new multi-test format and a legacy single-test format (still supported).
 
-#### Format 1: Inline Expression (for built-in functions)
+#### New Format: Multiple Tests with Flexible Assertions
 
 Create test files in the `tests` directory with the `.bicep-test.json` extension:
+
+```json
+{
+  "description": "Test suite for string functions",
+  "tests": [
+    {
+      "name": "String concatenation should match exact output",
+      "input": "concat('hello', ' ', 'world')",
+      "shouldBe": "'hello world'"
+    },
+    {
+      "name": "Array length should not be zero",
+      "input": "length([1, 2, 3])",
+      "shouldNotBe": "0"
+    },
+    {
+      "name": "toLower should contain lowercase text",
+      "input": "toLower('HELLO')",
+      "shouldContain": "hello"
+    }
+  ]
+}
+```
+
+**Assertion Types:**
+- `shouldBe`: Exact match - test passes if output equals this value
+- `shouldNotBe`: Negation - test passes if output does NOT equal this value
+- `shouldContain`: Substring match - test passes if output contains this text
+
+#### Legacy Format: Single Test (Still Supported)
+
+For backward compatibility, single-test files are still supported:
 
 ```json
 {
   "description": "Test concat function with strings",
   "input": "concat('hello', ' ', 'world')",
   "expected": "'hello world'"
-}
-```
-
-#### Format 2: Bicep File Reference (for custom functions)
-
-First, create a Bicep file with your custom functions:
-
-**bicep-functions/math-functions.bicep:**
-```bicep
-func add(a int, b int) int => a + b
-func multiply(a int, b int) int => a * b
-```
-
-Then create a test that references the Bicep file:
-
-```json
-{
-  "description": "Test custom add function",
-  "bicepFile": "bicep-functions/math-functions.bicep",
-  "functionCall": "add(5, 3)",
-  "expected": "8"
 }
 ```
 
@@ -97,28 +111,65 @@ Then create a test that references the Bicep file:
 
 Test files must be named with the `.bicep-test.json` extension. Two formats are supported:
 
-### Format 1: Inline Expression
+### New Format: Multiple Tests with Assertions
 
-For testing built-in Bicep functions:
+The recommended format allows multiple test cases in a single file with flexible assertion types:
 
 ```json
 {
-  "description": "Human-readable test description",
-  "input": "Bicep expression to evaluate",
-  "expected": "Expected output from bicep console"
+  "description": "Description of the test suite",
+  "tests": [
+    {
+      "name": "Test case name",
+      "input": "Bicep expression to evaluate",
+      "shouldBe": "Expected exact output"
+    },
+    {
+      "name": "Another test",
+      "bicepFile": "path/to/functions.bicep",
+      "functionCall": "myFunction(param)",
+      "shouldNotBe": "Value it should NOT equal"
+    },
+    {
+      "name": "Third test",
+      "input": "someFunction()",
+      "shouldContain": "Text that should appear in output"
+    }
+  ]
 }
 ```
 
-### Format 2: Bicep File Reference
+**Test Properties:**
+- `name` (optional): Human-readable test name
+- `input`: Inline Bicep expression to evaluate (use this OR bicepFile+functionCall)
+- `bicepFile`: Path to .bicep file with custom functions (use with functionCall)
+- `functionCall`: Function call expression when using bicepFile
 
-For testing custom functions defined in Bicep files:
+**Assertion Types (choose one per test):**
+- `shouldBe`: Exact match - output must equal this value exactly
+- `shouldNotBe`: Negation - output must NOT equal this value
+- `shouldContain`: Substring match - output must contain this text
+
+### Legacy Format: Single Test
+
+For backward compatibility, the original single-test format is still supported:
 
 ```json
 {
-  "description": "Human-readable test description",
+  "description": "Test description",
+  "input": "Bicep expression to evaluate",
+  "expected": "Expected output"
+}
+```
+
+Or with Bicep file reference:
+
+```json
+{
+  "description": "Test description",
   "bicepFile": "path/to/functions.bicep",
-  "functionCall": "myFunction(param1, param2)",
-  "expected": "Expected output from bicep console"
+  "functionCall": "myFunction(param)",
+  "expected": "Expected output"
 }
 ```
 
@@ -130,30 +181,67 @@ For testing custom functions defined in Bicep files:
 
 ### Example Test Files
 
+**Testing multiple assertions in one file:**
+```json
+{
+  "description": "Comprehensive string function tests",
+  "tests": [
+    {
+      "name": "Exact match test",
+      "input": "toUpper('bicep')",
+      "shouldBe": "'BICEP'"
+    },
+    {
+      "name": "Should not be empty",
+      "input": "concat('hello', 'world')",
+      "shouldNotBe": "''"
+    },
+    {
+      "name": "Contains substring",
+      "input": "toLower('HELLO WORLD')",
+      "shouldContain": "world"
+    }
+  ]
+}
+```
+
 **Testing parseCidr function:**
 ```json
 {
   "description": "Test parseCidr function with /20 CIDR block",
-  "input": "parseCidr('10.144.0.0/20')",
-  "expected": "{\n  network: '10.144.0.0'\n  netmask: '255.255.240.0'\n  broadcast: '10.144.15.255'\n  firstUsable: '10.144.0.1'\n  lastUsable: '10.144.15.254'\n  cidr: 20\n}"
+  "tests": [
+    {
+      "name": "parseCidr returns correct structure",
+      "input": "parseCidr('10.144.0.0/20')",
+      "shouldContain": "network: '10.144.0.0'"
+    },
+    {
+      "name": "parseCidr network should not be empty",
+      "input": "parseCidr('10.144.0.0/20')",
+      "shouldNotBe": "{}"
+    }
+  ]
 }
 ```
 
-**Testing length function:**
+**Testing custom functions from Bicep file:**
 ```json
 {
-  "description": "Test length function with an array",
-  "input": "length([1, 2, 3])",
-  "expected": "3"
-}
-```
-
-**Testing string functions:**
-```json
-{
-  "description": "Test toUpper function",
-  "input": "toUpper('bicep')",
-  "expected": "'BICEP'"
+  "description": "Test custom math functions",
+  "tests": [
+    {
+      "name": "Add function",
+      "bicepFile": "bicep-functions/math-functions.bicep",
+      "functionCall": "add(5, 3)",
+      "shouldBe": "8"
+    },
+    {
+      "name": "Multiply result should not be zero",
+      "bicepFile": "bicep-functions/math-functions.bicep",
+      "functionCall": "multiply(4, 5)",
+      "shouldNotBe": "0"
+    }
+  ]
 }
 ```
 
@@ -265,15 +353,57 @@ sh './run-tests.sh'
 
 ## Example Test Scenarios
 
-### Testing Built-in Functions
+### Testing with Multiple Assertions
 
-Test any built-in Bicep function using inline expressions:
+Combine different assertion types to thoroughly test your functions:
 
 ```json
 {
-  "description": "Test parseCidr function",
-  "input": "parseCidr('192.168.1.0/24')",
-  "expected": "{\n  network: '192.168.1.0'\n  netmask: '255.255.255.0'\n  broadcast: '192.168.1.255'\n  firstUsable: '192.168.1.1'\n  lastUsable: '192.168.1.254'\n  cidr: 24\n}"
+  "description": "Comprehensive validation tests",
+  "tests": [
+    {
+      "name": "Result should be exact value",
+      "input": "length([1, 2, 3])",
+      "shouldBe": "3"
+    },
+    {
+      "name": "Result should not be zero",
+      "input": "length([1, 2, 3])",
+      "shouldNotBe": "0"
+    },
+    {
+      "name": "Output should contain specific text",
+      "input": "parseCidr('192.168.1.0/24')",
+      "shouldContain": "network: '192.168.1.0'"
+    }
+  ]
+}
+```
+
+### Testing Built-in Functions
+
+Test any built-in Bicep function:
+
+```json
+{
+  "description": "Built-in function tests",
+  "tests": [
+    {
+      "name": "String replacement",
+      "input": "replace('hello world', 'world', 'bicep')",
+      "shouldBe": "'hello bicep'"
+    },
+    {
+      "name": "Empty array check",
+      "input": "length([])",
+      "shouldNotBe": "5"
+    },
+    {
+      "name": "Unique string generation",
+      "input": "uniqueString('test')",
+      "shouldNotBe": "''"
+    }
+  ]
 }
 ```
 
@@ -292,45 +422,87 @@ func isValidEnvironment(env string) bool =>
   contains(['dev', 'test', 'prod'], env)
 ```
 
-**Step 2:** Create tests referencing the Bicep file
+**Step 2:** Create tests with multiple assertions
 
-**tests/naming-dev-env.bicep-test.json:**
+**tests/naming-tests.bicep-test.json:**
 ```json
 {
-  "description": "Test resource name generation for dev environment",
-  "bicepFile": "bicep-functions/naming.bicep",
-  "functionCall": "getResourceName('storage', 'myapp', 'dev')",
-  "expected": "'storage-myapp-dev'"
+  "description": "Naming convention validation tests",
+  "tests": [
+    {
+      "name": "Resource name format for dev",
+      "bicepFile": "bicep-functions/naming.bicep",
+      "functionCall": "getResourceName('storage', 'myapp', 'dev')",
+      "shouldBe": "'storage-myapp-dev'"
+    },
+    {
+      "name": "Resource name should contain app name",
+      "bicepFile": "bicep-functions/naming.bicep",
+      "functionCall": "getResourceName('storage', 'myapp', 'prod')",
+      "shouldContain": "myapp"
+    },
+    {
+      "name": "Valid environment check",
+      "bicepFile": "bicep-functions/naming.bicep",
+      "functionCall": "isValidEnvironment('prod')",
+      "shouldBe": "true"
+    },
+    {
+      "name": "Invalid environment check",
+      "bicepFile": "bicep-functions/naming.bicep",
+      "functionCall": "isValidEnvironment('staging')",
+      "shouldNotBe": "true"
+    }
+  ]
 }
 ```
 
-**tests/validate-env.bicep-test.json:**
+### Testing Negative Cases
+
+Use `shouldNotBe` to test what values should NOT be returned:
+
 ```json
 {
-  "description": "Test environment validation",
-  "bicepFile": "bicep-functions/naming.bicep",
-  "functionCall": "isValidEnvironment('prod')",
-  "expected": "true"
+  "description": "Negative test cases",
+  "tests": [
+    {
+      "name": "Empty array should not have positive length",
+      "input": "length([])",
+      "shouldNotBe": "5"
+    },
+    {
+      "name": "Result should not be null",
+      "input": "concat('a', 'b')",
+      "shouldNotBe": "null"
+    },
+    {
+      "name": "Function should not return empty string",
+      "input": "uniqueString('input')",
+      "shouldNotBe": "''"
+    }
+  ]
 }
 ```
 
-### Testing Complex Expressions
+### Testing Partial Matches
+
+Use `shouldContain` for complex objects or when you only care about part of the output:
 
 ```json
 {
-  "description": "Test nested function calls",
-  "input": "length(concat([1, 2], [3, 4]))",
-  "expected": "4"
-}
-```
-
-### Testing Edge Cases
-
-```json
-{
-  "description": "Test empty array length",
-  "input": "length([])",
-  "expected": "0"
+  "description": "Partial match tests",
+  "tests": [
+    {
+      "name": "parseCidr should include network field",
+      "input": "parseCidr('10.0.0.0/16')",
+      "shouldContain": "network: '10.0.0.0'"
+    },
+    {
+      "name": "Output should contain expected substring",
+      "input": "toLower('HELLO WORLD')",
+      "shouldContain": "hello"
+    }
+  ]
 }
 ```
 
@@ -348,12 +520,17 @@ func isValidEnvironment(env string) bool =>
 
 ## Tips and Best Practices
 
-1. **Keep tests focused**: One test per function/scenario
-2. **Use descriptive names**: Name test files clearly (e.g., `parseCidr-ipv4.bicep-test.json`)
-3. **Test edge cases**: Include tests for empty inputs, nulls, and boundary conditions
-4. **Document complex tests**: Use the `description` field to explain what you're testing
-5. **Version control**: Commit your test files to track changes over time
-6. **Run locally first**: Test your changes locally before pushing to CI/CD
+1. **Group related tests**: Use the multi-test format to group related test cases in one file
+2. **Use descriptive names**: Give each test a clear `name` field to identify what's being tested
+3. **Choose the right assertion**: 
+   - Use `shouldBe` for exact matches
+   - Use `shouldNotBe` for negative tests and exclusions
+   - Use `shouldContain` for partial matches or complex objects
+4. **Test edge cases**: Include tests for empty inputs, nulls, and boundary conditions
+5. **Document complex tests**: Use the `description` field at the suite level for context
+6. **Version control**: Commit your test files to track changes over time
+7. **Run locally first**: Test your changes locally before pushing to CI/CD
+8. **Combine assertions**: Test the same function with different assertion types for thorough coverage
 
 ## Troubleshooting
 

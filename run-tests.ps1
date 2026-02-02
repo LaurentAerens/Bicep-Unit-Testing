@@ -57,34 +57,32 @@ function Normalize-Output {
     return ($lines -join "`n").Trim()
 }
 
-# Function to run a single test
-function Run-Test {
-    param([string]$TestFile)
+# Function to run a single test case
+function Run-SingleTest {
+    param(
+        [object]$Test,
+        [string]$TestName,
+        [int]$TestIndex
+    )
     
-    $testName = [System.IO.Path]::GetFileNameWithoutExtension($TestFile) -replace '\.bicep-test$', ''
+    $inputExpr = $Test.input
+    $bicepFile = $Test.bicepFile
+    $functionCall = $Test.functionCall
+    $shouldBe = $Test.shouldBe
+    $shouldNotBe = $Test.shouldNotBe
+    $shouldContain = $Test.shouldContain
+    $testDisplayName = if ($Test.name) { $Test.name } else { "Test $TestIndex" }
     
     if (-not $Quiet) {
-        Write-Host "`nRunning test: $testName" -ForegroundColor Yellow
-    }
-    
-    # Read test file
-    $testData = Get-Content $TestFile -Raw | ConvertFrom-Json
-    $inputExpr = $testData.input
-    $bicepFile = $testData.bicepFile
-    $functionCall = $testData.functionCall
-    $expected = $testData.expected
-    $description = $testData.description
-    
-    if ($VerboseOutput -and $description) {
-        Write-Host "  Description: $description"
+        Write-Host "  [$TestIndex] $testDisplayName" -ForegroundColor Cyan
     }
     
     # Determine input based on test format
     if ($bicepFile -and $functionCall) {
         # Using bicepFile + functionCall format
         if (-not (Test-Path $bicepFile)) {
-            Write-Host "  ✗ FAILED" -ForegroundColor Red
-            Write-Host "  Error: Bicep file not found: $bicepFile"
+            Write-Host "    ✗ FAILED" -ForegroundColor Red
+            Write-Host "    Error: Bicep file not found: $bicepFile"
             $script:FailedTests++
             return $false
         }
@@ -99,20 +97,20 @@ $functionCall
 "@
         
         if ($VerboseOutput) {
-            Write-Host "  Bicep file: $bicepFile"
-            Write-Host "  Function call: $functionCall"
+            Write-Host "    Bicep file: $bicepFile"
+            Write-Host "    Function call: $functionCall"
         }
     } else {
         # Using inline input format
         if (-not $inputExpr) {
-            Write-Host "  ✗ FAILED" -ForegroundColor Red
-            Write-Host "  Error: Test must have either 'input' or 'bicepFile' + 'functionCall'"
+            Write-Host "    ✗ FAILED" -ForegroundColor Red
+            Write-Host "    Error: Test must have either 'input' or 'bicepFile' + 'functionCall'"
             $script:FailedTests++
             return $false
         }
         
         if ($VerboseOutput) {
-            Write-Host "  Input: $inputExpr"
+            Write-Host "    Input: $inputExpr"
         }
     }
     
@@ -120,33 +118,124 @@ $functionCall
     try {
         $actualOutput = $inputExpr | bicep console 2>&1 | Out-String
         $actual = Normalize-Output $actualOutput
-        $expectedNormalized = Normalize-Output $expected
         
         if ($VerboseOutput) {
-            Write-Host "  Expected: $expectedNormalized"
-            Write-Host "  Actual: $actual"
+            Write-Host "    Actual: $actual"
         }
         
-        # Compare outputs
-        if ($actual -eq $expectedNormalized) {
+        # Determine which assertion to use
+        $passed = $false
+        $assertionType = ""
+        $assertionValue = ""
+        
+        if ($null -ne $shouldBe) {
+            # shouldBe: exact match
+            $assertionType = "shouldBe"
+            $expectedNormalized = Normalize-Output $shouldBe
+            $assertionValue = $expectedNormalized
+            $passed = ($actual -eq $expectedNormalized)
+        }
+        elseif ($null -ne $shouldNotBe) {
+            # shouldNotBe: must not match
+            $assertionType = "shouldNotBe"
+            $notExpectedNormalized = Normalize-Output $shouldNotBe
+            $assertionValue = $notExpectedNormalized
+            $passed = ($actual -ne $notExpectedNormalized)
+        }
+        elseif ($null -ne $shouldContain) {
+            # shouldContain: substring match
+            $assertionType = "shouldContain"
+            $containsNormalized = Normalize-Output $shouldContain
+            $assertionValue = $containsNormalized
+            $passed = ($actual -like "*$containsNormalized*")
+        }
+        else {
+            Write-Host "    ✗ FAILED" -ForegroundColor Red
+            Write-Host "    Error: Test must have one of: shouldBe, shouldNotBe, or shouldContain"
+            $script:FailedTests++
+            return $false
+        }
+        
+        # Report results
+        if ($passed) {
             if (-not $Quiet) {
-                Write-Host "  ✓ PASSED" -ForegroundColor Green
+                Write-Host "    ✓ PASSED" -ForegroundColor Green
             }
             $script:PassedTests++
             return $true
         } else {
-            Write-Host "  ✗ FAILED" -ForegroundColor Red
-            Write-Host "  Expected: $expectedNormalized"
-            Write-Host "  Actual:   $actual"
+            Write-Host "    ✗ FAILED" -ForegroundColor Red
+            switch ($assertionType) {
+                "shouldBe" {
+                    Write-Host "    Expected: $assertionValue"
+                    Write-Host "    Actual:   $actual"
+                }
+                "shouldNotBe" {
+                    Write-Host "    Should NOT be: $assertionValue"
+                    Write-Host "    But actual was: $actual"
+                }
+                "shouldContain" {
+                    Write-Host "    Should contain: $assertionValue"
+                    Write-Host "    Actual:         $actual"
+                }
+            }
             $script:FailedTests++
             return $false
         }
     }
     catch {
-        Write-Host "  ✗ FAILED (Exception)" -ForegroundColor Red
-        Write-Host "  Error: $_" -ForegroundColor Red
+        Write-Host "    ✗ FAILED (Exception)" -ForegroundColor Red
+        Write-Host "    Error: $_" -ForegroundColor Red
         $script:FailedTests++
         return $false
+    }
+}
+
+# Function to run a test file (may contain multiple tests)
+function Run-Test {
+    param([string]$TestFile)
+    
+    $testName = [System.IO.Path]::GetFileNameWithoutExtension($TestFile) -replace '\.bicep-test$', ''
+    
+    if (-not $Quiet) {
+        Write-Host "`nRunning test: $testName" -ForegroundColor Yellow
+    }
+    
+    # Read test file
+    $testData = Get-Content $TestFile -Raw | ConvertFrom-Json
+    $description = $testData.description
+    
+    if ($VerboseOutput -and $description) {
+        Write-Host "  Description: $description"
+    }
+    
+    # Check if this is the new multi-test format or legacy format
+    if ($testData.PSObject.Properties.Name -contains 'tests') {
+        # New format: multiple tests in array
+        $tests = $testData.tests
+        if ($tests.Count -eq 0) {
+            Write-Host "  ✗ WARNING: No tests defined in file" -ForegroundColor Yellow
+            return
+        }
+        
+        for ($i = 0; $i -lt $tests.Count; $i++) {
+            $script:TotalTests++
+            Run-SingleTest -Test $tests[$i] -TestName $testName -TestIndex ($i + 1)
+        }
+    }
+    else {
+        # Legacy format: single test in root
+        $script:TotalTests++
+        
+        # Convert legacy format to new format for processing
+        $legacyTest = @{
+            input = $testData.input
+            bicepFile = $testData.bicepFile
+            functionCall = $testData.functionCall
+            shouldBe = $testData.expected  # Map 'expected' to 'shouldBe'
+        }
+        
+        Run-SingleTest -Test $legacyTest -TestName $testName -TestIndex 1
     }
 }
 
@@ -186,7 +275,6 @@ if ($testFiles.Count -eq 0) {
 
 # Run all tests
 foreach ($testFile in $testFiles) {
-    $script:TotalTests++
     Run-Test -TestFile $testFile.FullName
 }
 

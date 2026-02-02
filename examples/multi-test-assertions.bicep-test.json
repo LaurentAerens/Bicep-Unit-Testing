@@ -1,0 +1,45 @@
+{
+  "description": "Example demonstrating multiple tests with different assertion types",
+  "tests": [
+    {
+      "name": "String concatenation should match exact output",
+      "input": "concat('hello', ' ', 'world')",
+      "shouldBe": "'hello world'"
+    },
+    {
+      "name": "Array length should not be zero",
+      "input": "length([1, 2, 3, 4, 5])",
+      "shouldNotBe": "0"
+    },
+    {
+      "name": "toLower should contain lowercase text",
+      "input": "toLower('HELLO WORLD')",
+      "shouldContain": "hello"
+    },
+    {
+      "name": "toUpper should produce uppercase",
+      "input": "toUpper('test')",
+      "shouldBe": "'TEST'"
+    },
+    {
+      "name": "Empty array should not have length greater than zero",
+      "input": "length([])",
+      "shouldNotBe": "5"
+    },
+    {
+      "name": "parseCidr output should contain network address",
+      "input": "parseCidr('10.0.0.0/16')",
+      "shouldContain": "network: '10.0.0.0'"
+    },
+    {
+      "name": "uniqueString should not be empty",
+      "input": "uniqueString('test-input')",
+      "shouldNotBe": "''"
+    },
+    {
+      "name": "Replace function should transform text",
+      "input": "replace('Hello World', 'World', 'Bicep')",
+      "shouldBe": "'Hello Bicep'"
+    }
+  ]
+}
