@@ -91,21 +91,48 @@ normalize_output() {
 
 # Function to run a single test case
 run_single_test() {
-    local test="$1"
+    # This function accepts either:
+    # 1) A test JSON string (legacy behavior): run_single_test "$test_json" "$test_name" $test_index
+    # 2) A test file path + test name + zero-based index: run_single_test "$test_file" "$test_name" $index
+    local arg1="$1"
     local test_name="$2"
     local test_index="$3"
     
-    # Parse test case fields using jq
-    local input=$(echo "$test" | jq -r '.input // "null"')
-    local bicep_file=$(echo "$test" | jq -r '.bicepFile // "null"')
-    local function_call=$(echo "$test" | jq -r '.functionCall // "null"')
-    local should_be=$(echo "$test" | jq -r '.shouldBe // "null"')
-    local should_not_be=$(echo "$test" | jq -r '.shouldNotBe // "null"')
-    local should_contain=$(echo "$test" | jq -r '.shouldContain // "null"')
-    local test_display_name=$(echo "$test" | jq -r '.name // "null"')
+    # If arg1 is a file path and index is numeric, read fields directly from the test file to avoid jq parsing errors
+    local input
+    local bicep_file
+    local function_call
+    local should_be
+    local should_not_be
+    local should_contain
+    local test_display_name
+
+    if [ -f "$arg1" ] && [[ "$test_index" =~ ^[0-9]+$ ]]; then
+        local test_file="$arg1"
+        local idx="$test_index"
+        input=$(jq -r ".tests[$idx].input // \"null\"" "$test_file")
+        bicep_file=$(jq -r ".tests[$idx].bicepFile // \"null\"" "$test_file")
+        function_call=$(jq -r ".tests[$idx].functionCall // \"null\"" "$test_file")
+        should_be=$(jq -r ".tests[$idx].shouldBe // \"null\"" "$test_file")
+        should_not_be=$(jq -r ".tests[$idx].shouldNotBe // \"null\"" "$test_file")
+        should_contain=$(jq -r ".tests[$idx].shouldContain // \"null\"" "$test_file")
+        test_display_name=$(jq -r ".tests[$idx].name // \"null\"" "$test_file")
+    else
+        # Legacy: arg1 contains the JSON test object as a string
+        local test_json="$arg1"
+        input=$(echo "$test_json" | jq -r '.input // "null"')
+        bicep_file=$(echo "$test_json" | jq -r '.bicepFile // "null"')
+        function_call=$(echo "$test_json" | jq -r '.functionCall // "null"')
+        should_be=$(echo "$test_json" | jq -r '.shouldBe // "null"')
+        should_not_be=$(echo "$test_json" | jq -r '.shouldNotBe // "null"')
+        should_contain=$(echo "$test_json" | jq -r '.shouldContain // "null"')
+        test_display_name=$(echo "$test_json" | jq -r '.name // "null"')
+    fi
     
     if [ "$test_display_name" = "null" ]; then
-        test_display_name="Test $test_index"
+        # if index is zero-based, present as 1-based in display
+        display_index=$((test_index+1))
+        test_display_name="Test $display_index"
     fi
     
     if [ "$QUIET_MODE" != "true" ]; then
@@ -252,8 +279,8 @@ run_test() {
         
         for ((i=0; i<test_count; i++)); do
             ((TOTAL_TESTS++))
-            local test_case=$(jq ".tests[$i]" "$test_file")
-            run_single_test "$test_case" "$test_name" $((i+1)) || true
+            # Pass the test file and zero-based index to avoid serialization/parsing issues
+            run_single_test "$test_file" "$test_name" $i || true
         done
     else
         # Legacy format: single test in root

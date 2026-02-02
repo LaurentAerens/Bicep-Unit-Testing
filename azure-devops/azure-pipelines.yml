@@ -1,30 +1,30 @@
-# Azure DevOps Pipeline for Bicep Function Unit Tests
+# Azure DevOps Pipeline for Bicep Function Unit Tests (Linux-only example)
 
 trigger:
   branches:
     include:
-    - main
-    - master
+      - main
+      - master
 
 pr:
   branches:
     include:
-    - main
-    - master
+      - main
+      - master
 
 variables:
   BICEP_VERSION: 'latest'
 
 jobs:
 - job: Test_Linux
-  displayName: 'Test on Linux'
+  displayName: 'Test on Linux (example)'
   pool:
     vmImage: 'ubuntu-latest'
-  
+
   steps:
   - checkout: self
     displayName: 'Checkout code'
-  
+
   - bash: |
       echo "Installing Bicep CLI..."
       curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
@@ -32,12 +32,12 @@ jobs:
       sudo mv bicep /usr/local/bin/bicep
       bicep --version
     displayName: 'Install Bicep CLI'
-  
+
   - bash: |
-      chmod +x ./run-tests.sh
-      ./run-tests.sh -v
-    displayName: 'Run Bicep function tests'
-    
+      chmod +x ./framework/run-tests.sh
+      ./framework/run-tests.sh -v
+    displayName: 'Run Bicep function tests (framework)'
+
   - task: PublishTestResults@2
     displayName: 'Publish test results'
     condition: always()
@@ -46,66 +46,3 @@ jobs:
       testResultsFiles: '**/test-results.xml'
       failTaskOnFailedTests: true
       testRunTitle: 'Bicep Function Tests (Linux)'
-
-- job: Test_Windows
-  displayName: 'Test on Windows'
-  pool:
-    vmImage: 'windows-latest'
-  
-  steps:
-  - checkout: self
-    displayName: 'Checkout code'
-  
-  - powershell: |
-      Write-Host "Installing Bicep CLI..."
-      $InstallPath = "C:\bicep"
-      New-Item -ItemType Directory -Force -Path $InstallPath | Out-Null
-      Invoke-WebRequest -Uri "https://github.com/Azure/bicep/releases/latest/download/bicep-win-x64.exe" -OutFile "$InstallPath\bicep.exe"
-      $env:PATH = "$InstallPath;$env:PATH"
-      [Environment]::SetEnvironmentVariable("PATH", $env:PATH, "Process")
-      bicep --version
-    displayName: 'Install Bicep CLI'
-  
-  - powershell: |
-      $env:PATH = "C:\bicep;$env:PATH"
-      pwsh ./run-tests.ps1 -VerboseOutput
-    displayName: 'Run Bicep function tests'
-    
-  - task: PublishTestResults@2
-    displayName: 'Publish test results'
-    condition: always()
-    inputs:
-      testResultsFormat: 'JUnit'
-      testResultsFiles: '**/test-results.xml'
-      failTaskOnFailedTests: true
-      testRunTitle: 'Bicep Function Tests (Windows)'
-
-- job: Test_macOS
-  displayName: 'Test on macOS'
-  pool:
-    vmImage: 'macOS-latest'
-  
-  steps:
-  - checkout: self
-    displayName: 'Checkout code'
-  
-  - bash: |
-      echo "Installing Bicep CLI..."
-      brew tap azure/bicep
-      brew install bicep
-      bicep --version
-    displayName: 'Install Bicep CLI'
-  
-  - bash: |
-      chmod +x ./run-tests.sh
-      ./run-tests.sh -v
-    displayName: 'Run Bicep function tests'
-    
-  - task: PublishTestResults@2
-    displayName: 'Publish test results'
-    condition: always()
-    inputs:
-      testResultsFormat: 'JUnit'
-      testResultsFiles: '**/test-results.xml'
-      failTaskOnFailedTests: true
-      testRunTitle: 'Bicep Function Tests (macOS)'

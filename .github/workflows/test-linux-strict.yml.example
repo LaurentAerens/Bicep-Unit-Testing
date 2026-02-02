@@ -1,0 +1,32 @@
+name: Run Bicep Function Tests (Linux only - strict)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-linux:
+    name: Test on Linux (strict)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Bicep CLI
+        run: |
+          # Download and install latest Bicep CLI
+          curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+          chmod +x bicep
+          sudo mv bicep /usr/local/bin/bicep
+          bicep --version
+
+      - name: Run tests (Bash)
+        run: |
+          chmod +x ./framework/run-tests.sh
+          ./framework/run-tests.sh -v
