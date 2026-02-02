@@ -29,7 +29,7 @@ Bicep-Unit-Testing/
 │   └── run-tests.ps1             # PowerShell runner (use pwsh)
 ├── tests/                        # Test files (canonical)
 │   ├── complex-function/         # complex function examples (overlapping-subnets)
-│   └── ignored/                  # intentionally failing tests (CI ignores this folder)
+├── failing-examples/            # Example tests that are expected to fail
 └── README.md
 ```
 
