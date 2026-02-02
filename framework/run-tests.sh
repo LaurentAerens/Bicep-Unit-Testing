@@ -89,6 +89,13 @@ normalize_output() {
     echo "$output" | tr -d '\r' | grep -v "WARNING: The 'console' CLI command is an experimental feature" | sed '/^$/d'
 }
 
+# Function to clean test JSON files that may contain Markdown fences or CRLFs
+clean_test_file() {
+    local file="$1"
+    # Remove any lines that are Markdown fences (```), and strip CR characters
+    sed 's/\r$//' "$file" | sed '/^```/d'
+}
+
 # Function to run a single test case
 run_single_test() {
     # This function accepts either:
@@ -110,13 +117,13 @@ run_single_test() {
     if [ -f "$arg1" ] && [[ "$test_index" =~ ^[0-9]+$ ]]; then
         local test_file="$arg1"
         local idx="$test_index"
-        input=$(jq -r ".tests[$idx].input // \"null\"" "$test_file")
-        bicep_file=$(jq -r ".tests[$idx].bicepFile // \"null\"" "$test_file")
-        function_call=$(jq -r ".tests[$idx].functionCall // \"null\"" "$test_file")
-        should_be=$(jq -r ".tests[$idx].shouldBe // \"null\"" "$test_file")
-        should_not_be=$(jq -r ".tests[$idx].shouldNotBe // \"null\"" "$test_file")
-        should_contain=$(jq -r ".tests[$idx].shouldContain // \"null\"" "$test_file")
-        test_display_name=$(jq -r ".tests[$idx].name // \"null\"" "$test_file")
+        input=$(clean_test_file "$test_file" | jq -r ".tests[$idx].input // \"null\"" -)
+        bicep_file=$(clean_test_file "$test_file" | jq -r ".tests[$idx].bicepFile // \"null\"" -)
+        function_call=$(clean_test_file "$test_file" | jq -r ".tests[$idx].functionCall // \"null\"" -)
+        should_be=$(clean_test_file "$test_file" | jq -r ".tests[$idx].shouldBe // \"null\"" -)
+        should_not_be=$(clean_test_file "$test_file" | jq -r ".tests[$idx].shouldNotBe // \"null\"" -)
+        should_contain=$(clean_test_file "$test_file" | jq -r ".tests[$idx].shouldContain // \"null\"" -)
+        test_display_name=$(clean_test_file "$test_file" | jq -r ".tests[$idx].name // \"null\"" -)
     else
         # Legacy: arg1 contains the JSON test object as a string
         local test_json="$arg1"
@@ -259,18 +266,18 @@ run_test() {
     fi
     
     # Read test file
-    local description=$(jq -r '.description // ""' "$test_file")
+    local description=$(clean_test_file "$test_file" | jq -r '.description // ""' -)
     
     if [ "$VERBOSE" = "true" ] && [ ! -z "$description" ]; then
         echo "  Description: $description"
     fi
     
     # Check if this is the new multi-test format or legacy format
-    local has_tests_array=$(jq 'has("tests")' "$test_file")
+    local has_tests_array=$(clean_test_file "$test_file" | jq 'has("tests")' -)
     
     if [ "$has_tests_array" = "true" ]; then
         # New format: multiple tests in array
-        local test_count=$(jq '.tests | length' "$test_file")
+        local test_count=$(clean_test_file "$test_file" | jq '.tests | length' -)
         
         if [ "$test_count" = "0" ]; then
             echo -e "  ${YELLOW}✗ WARNING: No tests defined in file${NC}"
