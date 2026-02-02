@@ -1,0 +1,6 @@
+{
+  "description": "Test custom add function from Bicep file",
+  "bicepFile": "bicep-functions/math-functions.bicep",
+  "functionCall": "add(5, 3)",
+  "expected": "8"
+}

@@ -1,0 +1,5 @@
+{
+  "description": "Test concat function with strings",
+  "input": "concat('hello', ' ', 'world')",
+  "expected": "'hello world'"
+}

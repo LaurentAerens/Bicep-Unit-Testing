@@ -1,0 +1,6 @@
+{
+  "description": "Test environment validation function",
+  "bicepFile": "bicep-functions/example-functions.bicep",
+  "functionCall": "isValidEnvironment('dev')",
+  "expected": "true"
+}

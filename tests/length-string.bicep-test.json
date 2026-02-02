@@ -1,0 +1,5 @@
+{
+  "description": "Test length function with a string",
+  "input": "length('hello')",
+  "expected": "5"
+}

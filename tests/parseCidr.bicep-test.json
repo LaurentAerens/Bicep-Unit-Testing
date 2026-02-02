@@ -1,0 +1,5 @@
+{
+  "description": "Test parseCidr function with /20 CIDR block",
+  "input": "parseCidr('10.144.0.0/20')",
+  "expected": "{\n  network: '10.144.0.0'\n  netmask: '255.255.240.0'\n  broadcast: '10.144.15.255'\n  firstUsable: '10.144.0.1'\n  lastUsable: '10.144.15.254'\n  cidr: 20\n}"
+}

@@ -1,0 +1,5 @@
+{
+  "description": "Test length function with an array",
+  "input": "length([1, 2, 3])",
+  "expected": "3"
+}
