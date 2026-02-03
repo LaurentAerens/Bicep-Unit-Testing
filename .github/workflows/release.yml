@@ -18,6 +18,8 @@ on:
 
 permissions:
   contents: write
+  issues: read
+  pull-requests: read
 
 jobs:
   release:
@@ -70,17 +72,12 @@ jobs:
           git push origin "v${{ steps.gitversion.outputs.semVer }}"
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.gitversion.outputs.semVer }}
-          release_name: Release v${{ steps.gitversion.outputs.semVer }}
+          name: Release v${{ steps.gitversion.outputs.semVer }}
           body: |
             ## Bicep Unit Testing Framework v${{ steps.gitversion.outputs.semVer }}
-            
-            ### What's Changed
-            - See commit history for details
             
             ### Version Information
             - **Version**: ${{ steps.gitversion.outputs.semVer }}
@@ -93,5 +90,6 @@ jobs:
             cd Bicep-Unit-Testing
             git checkout v${{ steps.gitversion.outputs.semVer }}
             ```
+          generate_release_notes: true
           draft: false
           prerelease: false
