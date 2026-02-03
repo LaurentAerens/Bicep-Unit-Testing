@@ -1,3 +1,4 @@
+next-version: 1.0.0
 mode: ContinuousDelivery
 branches:
   main:
@@ -7,8 +8,6 @@ branches:
     increment: None
     prevent-increment-of-merged-branch-version: true
     track-merge-target: false
-    tracks-release-branches: false
-    is-release-branch: false
     is-mainline: true
   release:
     regex: ^releases?[/-]
@@ -17,9 +16,9 @@ branches:
     increment: Major
     prevent-increment-of-merged-branch-version: true
     track-merge-target: false
-    tracks-release-branches: false
     is-release-branch: true
     is-mainline: false
+    source-branches: ['main']
   feature:
     regex: ^features?[/-]
     mode: ContinuousDelivery
@@ -27,9 +26,9 @@ branches:
     increment: Minor
     prevent-increment-of-merged-branch-version: false
     track-merge-target: false
-    tracks-release-branches: false
     is-release-branch: false
     is-mainline: false
+    source-branches: ['main']
   fix:
     regex: ^(fix|hotfix|bugfix)[/-]
     mode: ContinuousDelivery
@@ -37,9 +36,9 @@ branches:
     increment: Patch
     prevent-increment-of-merged-branch-version: false
     track-merge-target: false
-    tracks-release-branches: false
     is-release-branch: false
     is-mainline: false
+    source-branches: ['main']
 ignore:
   sha: []
 merge-message-formats: {}
