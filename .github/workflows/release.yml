@@ -60,7 +60,7 @@ jobs:
       - name: Run tests
         shell: pwsh
         run: |
-          ./framework/run-tests.ps1 -VerboseOutput
+          ./framework/run-tests.ps1 -Parallel -VerboseOutput
 
       - name: Create Release Tag
         run: |
