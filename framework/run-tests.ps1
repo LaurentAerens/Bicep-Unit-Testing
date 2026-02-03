@@ -290,7 +290,19 @@ Write-Host "================================================"
 
 # Exit with appropriate code
 if ($script:FailedTests -gt 0) {
+    Write-Error "$($script:FailedTests) test(s) failed"
+    # Ensure process exit code is set for different hosting scenarios
+    try {
+        $global:LASTEXITCODE = 1
+    }
+    catch {
+        # ignore if cannot set
+    }
     exit 1
 } else {
+    try {
+        $global:LASTEXITCODE = 0
+    }
+    catch {}
     exit 0
 }
