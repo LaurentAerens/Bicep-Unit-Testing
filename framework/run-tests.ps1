@@ -27,12 +27,22 @@
 .EXAMPLE
     ./run-tests.ps1 -Verbose
     Run tests with verbose output
+
+.EXAMPLE
+    ./run-tests.ps1 -Parallel
+    Run tests in parallel (default: uses number of CPU cores)
+
+.EXAMPLE
+    ./run-tests.ps1 -Parallel -MaxParallelJobs 4
+    Run tests in parallel with maximum of 4 concurrent jobs
 #>
 
 param(
     [string]$TestDir = "./tests",
     [switch]$VerboseOutput,
-    [switch]$Quiet
+    [switch]$Quiet,
+    [switch]$Parallel,
+    [int]$MaxParallelJobs = [Environment]::ProcessorCount
 )
 
 # Counters
@@ -244,6 +254,11 @@ Write-Host "================================================"
 Write-Host "Bicep Function Unit Test Runner"
 Write-Host "================================================"
 Write-Host "Test directory: $TestDir"
+if ($Parallel) {
+    Write-Host "Mode: Parallel (max $MaxParallelJobs jobs)"
+} else {
+    Write-Host "Mode: Sequential"
+}
 Write-Host ""
 
 # Check if bicep is installed
@@ -273,9 +288,273 @@ if ($testFiles.Count -eq 0) {
     exit 0
 }
 
-# Run all tests
-foreach ($testFile in $testFiles) {
-    Run-Test -TestFile $testFile.FullName
+# Run tests (sequential or parallel)
+if ($Parallel) {
+    # Parallel execution with output buffering
+    $testResults = @()
+    
+    $testFiles | ForEach-Object -Parallel {
+        # Import functions and parameters into parallel scope
+        $testFile = $_
+        $VerboseOutput = $using:VerboseOutput
+        $Quiet = $using:Quiet
+        $TestDir = $using:TestDir
+        
+        # Output buffer for this test file
+        $outputBuffer = @()
+        
+        # Re-define functions in parallel scope
+        function Add-OutputLine {
+            param([string]$Line, [string]$Color = "White")
+            $global:outputBuffer += @{
+                text = $Line
+                color = $Color
+            }
+        }
+        
+        function Normalize-Output {
+            param([string]$Output)
+            $Output = $Output -replace "`r", ""
+            $lines = $Output -split "`n" | Where-Object { 
+                $_ -notmatch "WARNING: The 'console' CLI command is an experimental feature" -and
+                $_ -notmatch "Experimental features should be used for testing purposes only" -and
+                $_.Trim() -ne ""
+            }
+            return ($lines -join "`n").Trim()
+        }
+        
+        function Run-SingleTest {
+            param(
+                [object]$Test,
+                [string]$TestName,
+                [int]$TestIndex
+            )
+            
+            $inputExpr = $Test.input
+            $bicepFile = $Test.bicepFile
+            $functionCall = $Test.functionCall
+            $shouldBe = $Test.shouldBe
+            $shouldNotBe = $Test.shouldNotBe
+            $shouldContain = $Test.shouldContain
+            $testDisplayName = if ($Test.name) { $Test.name } else { "Test $TestIndex" }
+            
+            if (-not $Quiet) {
+                Add-OutputLine "  [$TestIndex] $testDisplayName" "Cyan"
+            }
+            
+            # Determine input based on test format
+            if ($bicepFile -and $functionCall) {
+                if (-not (Test-Path $bicepFile)) {
+                    Add-OutputLine "    ✗ FAILED" "Red"
+                    Add-OutputLine "    Error: Bicep file not found: $bicepFile" "Red"
+                    return @{
+                        passed = $false
+                        testName = $testName
+                        testIndex = $TestIndex
+                        testDisplayName = $testDisplayName
+                    }
+                }
+                
+                $bicepContent = Get-Content $bicepFile -Raw
+                
+                $inputExpr = @"
+$bicepContent
+$functionCall
+"@
+                
+                if ($VerboseOutput) {
+                    Add-OutputLine "    Bicep file: $bicepFile" "White"
+                    Add-OutputLine "    Function call: $functionCall" "White"
+                }
+            } else {
+                if (-not $inputExpr) {
+                    Add-OutputLine "    ✗ FAILED" "Red"
+                    Add-OutputLine "    Error: Test must have either 'input' or 'bicepFile' + 'functionCall'" "Red"
+                    return @{
+                        passed = $false
+                        testName = $testName
+                        testIndex = $TestIndex
+                        testDisplayName = $testDisplayName
+                    }
+                }
+                
+                if ($VerboseOutput) {
+                    Add-OutputLine "    Input: $inputExpr" "White"
+                }
+            }
+            
+            # Run bicep console
+            try {
+                $actualOutput = $inputExpr | bicep console 2>&1 | Out-String
+                $actual = Normalize-Output $actualOutput
+                
+                if ($VerboseOutput) {
+                    Add-OutputLine "    Actual: $actual" "White"
+                }
+                
+                # Determine which assertion to use
+                $passed = $false
+                $assertionType = ""
+                $assertionValue = ""
+                $expected = ""
+                
+                if ($null -ne $shouldBe) {
+                    $assertionType = "shouldBe"
+                    $expectedNormalized = Normalize-Output $shouldBe
+                    $assertionValue = $expectedNormalized
+                    $expected = $expectedNormalized
+                    $passed = ($actual -eq $expectedNormalized)
+                }
+                elseif ($null -ne $shouldNotBe) {
+                    $assertionType = "shouldNotBe"
+                    $notExpectedNormalized = Normalize-Output $shouldNotBe
+                    $assertionValue = $notExpectedNormalized
+                    $expected = $notExpectedNormalized
+                    $passed = ($actual -ne $notExpectedNormalized)
+                }
+                elseif ($null -ne $shouldContain) {
+                    $assertionType = "shouldContain"
+                    $containsNormalized = Normalize-Output $shouldContain
+                    $assertionValue = $containsNormalized
+                    $expected = $containsNormalized
+                    $passed = ($actual -like "*$containsNormalized*")
+                }
+                else {
+                    Add-OutputLine "    ✗ FAILED" "Red"
+                    Add-OutputLine "    Error: Test must have one of: shouldBe, shouldNotBe, or shouldContain" "Red"
+                    return @{
+                        passed = $false
+                        testName = $testName
+                        testIndex = $TestIndex
+                        testDisplayName = $testDisplayName
+                    }
+                }
+                
+                # Report results
+                if ($passed) {
+                    if (-not $Quiet) {
+                        Add-OutputLine "    ✓ PASSED" "Green"
+                    }
+                    return @{
+                        passed = $true
+                        testName = $testName
+                        testIndex = $TestIndex
+                        testDisplayName = $testDisplayName
+                    }
+                } else {
+                    Add-OutputLine "    ✗ FAILED" "Red"
+                    switch ($assertionType) {
+                        "shouldBe" {
+                            Add-OutputLine "    Expected: $assertionValue" "Red"
+                            Add-OutputLine "    Actual:   $actual" "Red"
+                        }
+                        "shouldNotBe" {
+                            Add-OutputLine "    Should NOT be: $assertionValue" "Red"
+                            Add-OutputLine "    But actual was: $actual" "Red"
+                        }
+                        "shouldContain" {
+                            Add-OutputLine "    Should contain: $assertionValue" "Red"
+                            Add-OutputLine "    Actual:         $actual" "Red"
+                        }
+                    }
+                    return @{
+                        passed = $false
+                        testName = $testName
+                        testIndex = $TestIndex
+                        testDisplayName = $testDisplayName
+                    }
+                }
+            }
+            catch {
+                Add-OutputLine "    ✗ FAILED (Exception)" "Red"
+                Add-OutputLine "    Error: $_" "Red"
+                return @{
+                    passed = $false
+                    testName = $testName
+                    testIndex = $TestIndex
+                    testDisplayName = $testDisplayName
+                }
+            }
+        }
+        
+        function Run-Test {
+            param([string]$TestFile)
+            
+            $testName = [System.IO.Path]::GetFileNameWithoutExtension($TestFile) -replace '\.bicep-test$', ''
+            
+            Add-OutputLine "`nRunning test: $testName" "Yellow"
+            
+            # Read test file
+            $testData = Get-Content $TestFile -Raw | ConvertFrom-Json
+            $description = $testData.description
+            
+            if ($VerboseOutput -and $description) {
+                Add-OutputLine "  Description: $description" "White"
+            }
+            
+            $results = @()
+            
+            # Check if this is the new multi-test format or legacy format
+            if ($testData.PSObject.Properties.Name -contains 'tests') {
+                # New format: multiple tests in array
+                $tests = $testData.tests
+                if ($tests.Count -eq 0) {
+                    Add-OutputLine "  ✗ WARNING: No tests defined in file" "Yellow"
+                    return $results
+                }
+                
+                for ($i = 0; $i -lt $tests.Count; $i++) {
+                    $result = Run-SingleTest -Test $tests[$i] -TestName $testName -TestIndex ($i + 1)
+                    $results += $result
+                }
+            }
+            else {
+                # Legacy format: single test in root
+                $legacyTest = @{
+                    input = $testData.input
+                    bicepFile = $testData.bicepFile
+                    functionCall = $testData.functionCall
+                    shouldBe = $testData.expected
+                }
+                
+                $result = Run-SingleTest -Test $legacyTest -TestName $testName -TestIndex 1
+                $results += $result
+            }
+            
+            return $results
+        }
+        
+        # Run the test file and return results with output buffer
+        $testResults = Run-Test -TestFile $testFile.FullName
+        
+        # Return object with results and buffered output
+        return @{
+            testResults = $testResults
+            output = $outputBuffer
+        }
+        
+    } -ThrottleLimit $MaxParallelJobs | ForEach-Object {
+        # Print buffered output for this test file
+        foreach ($outputLine in $_.output) {
+            Write-Host $outputLine.text -ForegroundColor $outputLine.color
+        }
+        
+        # Aggregate test results
+        foreach ($result in $_.testResults) {
+            $testResults += $result
+        }
+    }
+    
+    # Aggregate results
+    $script:TotalTests = $testResults.Count
+    $script:PassedTests = ($testResults | Where-Object { $_.passed }).Count
+    $script:FailedTests = ($testResults | Where-Object { -not $_.passed }).Count
+    
+} else {
+    # Sequential execution (original behavior)
+    foreach ($testFile in $testFiles) {
+        Run-Test -TestFile $testFile.FullName
+    }
 }
 
 # Print summary
