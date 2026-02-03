@@ -122,8 +122,31 @@ For backward compatibility, single-test files are still supported:
 
 **Windows:**
 ```powershell
+# Sequential execution (default)
 .\framework\run-tests.ps1
+
+# Parallel execution (faster, uses all CPU cores)
+.\framework\run-tests.ps1 -Parallel
+
+# Parallel with limited concurrency
+.\framework\run-tests.ps1 -Parallel -MaxParallelJobs 4
+
+# Verbose output
+.\framework\run-tests.ps1 -Verbose
+
+# Quiet mode (summary only)
+.\framework\run-tests.ps1 -Quiet
+
+# Custom test directory
+.\framework\run-tests.ps1 -TestDir ./my-tests
 ```
+
+**Command Line Options:**
+- `-Parallel`: Enable parallel test execution (uses all CPU cores by default)
+- `-MaxParallelJobs <number>`: Limit concurrent jobs (default: CPU core count)
+- `-Verbose`: Show detailed output including inputs and actual results
+- `-Quiet`: Show only summary, suppress individual test output
+- `-TestDir <path>`: Specify custom test directory (default: `./tests`)
 
 ## Test File Format
 
