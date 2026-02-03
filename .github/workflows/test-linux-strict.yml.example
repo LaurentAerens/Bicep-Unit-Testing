@@ -26,7 +26,8 @@ jobs:
           sudo mv bicep /usr/local/bin/bicep
           bicep --version
 
-      - name: Run tests (Bash)
+      - name: Run tests (PowerShell)
+        shell: pwsh
         run: |
-          chmod +x ./framework/run-tests.sh
-          ./framework/run-tests.sh -v
+          $env:PATH = "/usr/local/bin:$env:PATH"
+          ./framework/run-tests.ps1 -Parallel -VerboseOutput

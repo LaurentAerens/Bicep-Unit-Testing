@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "/usr/local/bin:$env:PATH"
-          ./framework/run-tests.ps1 -VerboseOutput
+          ./framework/run-tests.ps1 -Parallel -VerboseOutput
 
   test-windows:
     name: Test on Windows
@@ -54,6 +54,6 @@ jobs:
       - name: Run tests (PowerShell)
         run: |
           $env:PATH = "C:\bicep;$env:PATH"
-          ./framework/run-tests.ps1 -VerboseOutput
+          ./framework/run-tests.ps1 -Parallel -VerboseOutput
         shell: pwsh
   # macOS job removed — workflow now runs on Linux and Windows (PowerShell)
