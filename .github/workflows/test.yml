@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "/usr/local/bin:$env:PATH"
-          pwsh -Command "& { ./framework/run-tests.ps1 -VerboseOutput 2>&1 | Tee-Object -FilePath test_output.txt; $rc = $LASTEXITCODE; if ($rc -ne 0) { Write-Error \"Test runner exited with code $rc\"; exit $rc } }"
+          ./framework/run-tests.ps1 -VerboseOutput
 
   test-windows:
     name: Test on Windows
@@ -54,6 +54,6 @@ jobs:
       - name: Run tests (PowerShell)
         run: |
           $env:PATH = "C:\bicep;$env:PATH"
-          pwsh -Command "& { ./framework/run-tests.ps1 -VerboseOutput 2>&1 | Tee-Object -FilePath test_output.txt; $rc = $LASTEXITCODE; if ($rc -ne 0) { Write-Error \"Test runner exited with code $rc\"; exit $rc } }"
+          ./framework/run-tests.ps1 -VerboseOutput
         shell: pwsh
   # macOS job removed — workflow now runs on Linux and Windows (PowerShell)
