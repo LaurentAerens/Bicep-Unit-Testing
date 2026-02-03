@@ -6,7 +6,7 @@ Automated unit testing framework for Bicep functions using the new `bicep consol
 
 - ✅ **Automated Testing**: Run all your Bicep function tests automatically
 - ✅ **Multiple Tests per File**: Define multiple test cases in a single test file
-- ✅ **Flexible Assertions**: Use `shouldBe`, `shouldNotBe`, or `shouldContain` assertion types
+- ✅ **Flexible Assertions**: Use 11 different assertion types for comprehensive validation
 - ✅ **Bicep File References**: Reference custom functions from .bicep files
 - ✅ **CI/CD Ready**: GitHub Actions and Azure DevOps pipelines included
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
@@ -100,6 +100,13 @@ Create test files in the `tests` directory with the `.bicep-test.json` extension
 - `shouldBe`: Exact match - test passes if output equals this value
 - `shouldNotBe`: Negation - test passes if output does NOT equal this value
 - `shouldContain`: Substring match - test passes if output contains this text
+- `shouldNotContain`: Inverse substring match - test passes if output does NOT contain this text
+- `shouldStartWith`: Prefix match - test passes if output starts with this value
+- `shouldEndWith`: Suffix match - test passes if output ends with this value
+- `shouldMatch`: Regex match - test passes if output matches the regex pattern
+- `shouldBeGreaterThan`: Numeric comparison - test passes if output is greater than this value
+- `shouldBeLessThan`: Numeric comparison - test passes if output is less than this value
+- `shouldBeEmpty`: Empty check - test passes if output is empty string, array, or object
 
 #### Legacy Format: Single Test (Still Supported)
 
@@ -190,6 +197,13 @@ The recommended format allows multiple test cases in a single file with flexible
 - `shouldBe`: Exact match - output must equal this value exactly
 - `shouldNotBe`: Negation - output must NOT equal this value
 - `shouldContain`: Substring match - output must contain this text
+- `shouldNotContain`: Inverse substring - output must NOT contain this text
+- `shouldStartWith`: Prefix match - output must start with this value
+- `shouldEndWith`: Suffix match - output must end with this value
+- `shouldMatch`: Regex match - output must match the regex pattern
+- `shouldBeGreaterThan`: Numeric comparison - output must be greater than this number
+- `shouldBeLessThan`: Numeric comparison - output must be less than this number
+- `shouldBeEmpty`: Empty check - output must be empty (empty string, [], or {})
 
 ### Legacy Format: Single Test
 
@@ -285,6 +299,130 @@ Or with Bicep file reference:
   ]
 }
 ```
+
+## Assertion Types Reference
+
+The framework supports 11 different assertion types for comprehensive test validation:
+
+### Exact Match Assertions
+
+**`shouldBe`** - Exact equality check
+```json
+{
+  "name": "Exact string match",
+  "input": "concat('hello', ' ', 'world')",
+  "shouldBe": "'hello world'"
+}
+```
+
+**`shouldNotBe`** - Inequality check
+```json
+{
+  "name": "Should not be empty",
+  "input": "length([1, 2, 3])",
+  "shouldNotBe": "0"
+}
+```
+
+### Substring Assertions
+
+**`shouldContain`** - Check if output contains substring
+```json
+{
+  "name": "Contains check",
+  "input": "toLower('HELLO WORLD')",
+  "shouldContain": "world"
+}
+```
+
+**`shouldNotContain`** - Check if output does NOT contain substring
+```json
+{
+  "name": "Does not contain check",
+  "input": "replace('production-env', 'production', 'dev')",
+  "shouldNotContain": "production"
+}
+```
+
+### Position Assertions
+
+**`shouldStartWith`** - Check if output starts with value
+```json
+{
+  "name": "Starts with check",
+  "input": "concat('bicep', '-', 'testing')",
+  "shouldStartWith": "'bicep"
+}
+```
+
+**`shouldEndWith`** - Check if output ends with value
+```json
+{
+  "name": "Ends with check",
+  "input": "concat('file', '.', 'json')",
+  "shouldEndWith": "json'"
+}
+```
+
+### Pattern Matching
+
+**`shouldMatch`** - Regex pattern matching
+```json
+{
+  "name": "Version pattern match",
+  "input": "concat('v', '1', '.', '2', '.', '3')",
+  "shouldMatch": "^'v\\d+\\.\\d+\\.\\d+'"
+}
+```
+
+```json
+{
+  "name": "GUID pattern match",
+  "input": "uniqueString('test-input')",
+  "shouldMatch": "^'[a-z0-9]+'"
+}
+```
+
+### Numeric Comparisons
+
+**`shouldBeGreaterThan`** - Greater than comparison
+```json
+{
+  "name": "Greater than check",
+  "input": "length([1, 2, 3, 4, 5])",
+  "shouldBeGreaterThan": "3"
+}
+```
+
+**`shouldBeLessThan`** - Less than comparison
+```json
+{
+  "name": "Less than check",
+  "input": "length([1, 2])",
+  "shouldBeLessThan": "5"
+}
+```
+
+### Empty Checks
+
+**`shouldBeEmpty`** - Check for empty values
+```json
+{
+  "name": "Empty string check",
+  "input": "replace('test', 'test', '')",
+  "shouldBeEmpty": true
+}
+```
+
+```json
+{
+  "name": "Empty array check",
+  "input": "[]",
+  "shouldBeEmpty": true
+}
+```
+
+**See [tests/advanced-assertions.bicep-test.json](tests/advanced-assertions.bicep-test.json) for complete examples of all assertion types.**
 
 ## Usage
 

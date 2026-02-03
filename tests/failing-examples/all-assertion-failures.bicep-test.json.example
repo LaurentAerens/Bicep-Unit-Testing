@@ -1,0 +1,105 @@
+{
+  "description": "Examples demonstrating all assertion type failures - DO NOT RUN IN CI",
+  "tests": [
+    {
+      "name": "FAIL: shouldBe - incorrect exact match",
+      "input": "concat('hello', ' ', 'world')",
+      "shouldBe": "'hello-world'"
+    },
+    {
+      "name": "FAIL: shouldBe - wrong numeric value",
+      "input": "length([1, 2, 3, 4, 5])",
+      "shouldBe": "3"
+    },
+    {
+      "name": "FAIL: shouldNotBe - matches actual value",
+      "input": "toUpper('test')",
+      "shouldNotBe": "'TEST'"
+    },
+    {
+      "name": "FAIL: shouldNotBe - numeric match",
+      "input": "length([1, 2])",
+      "shouldNotBe": "2"
+    },
+    {
+      "name": "FAIL: shouldContain - substring not found",
+      "input": "concat('hello', 'world')",
+      "shouldContain": "xyz"
+    },
+    {
+      "name": "FAIL: shouldContain - case mismatch",
+      "input": "toLower('testing')",
+      "shouldContain": "TESTING"
+    },
+    {
+      "name": "FAIL: shouldNotContain - substring is present",
+      "input": "concat('prefix-', 'value', '-suffix')",
+      "shouldNotContain": "value"
+    },
+    {
+      "name": "FAIL: shouldNotContain - text exists in output",
+      "input": "toUpper('HELLO')",
+      "shouldNotContain": "HELLO"
+    },
+    {
+      "name": "FAIL: shouldStartWith - wrong prefix",
+      "input": "concat('bicep', '-', 'testing')",
+      "shouldStartWith": "'azure"
+    },
+    {
+      "name": "FAIL: shouldStartWith - doesn't start with value",
+      "input": "concat('testing', '-', 'bicep')",
+      "shouldStartWith": "'bicep"
+    },
+    {
+      "name": "FAIL: shouldEndWith - wrong suffix",
+      "input": "concat('file', '.', 'json')",
+      "shouldEndWith": "txt'"
+    },
+    {
+      "name": "FAIL: shouldEndWith - doesn't end with value",
+      "input": "concat('json', '.', 'file')",
+      "shouldEndWith": "json'"
+    },
+    {
+      "name": "FAIL: shouldMatch - regex pattern doesn't match",
+      "input": "concat('version', '1')",
+      "shouldMatch": "^'v\\d+\\.\\d+\\.\\d+'"
+    },
+    {
+      "name": "FAIL: shouldMatch - pattern mismatch",
+      "input": "concat('test', '123', 'abc')",
+      "shouldMatch": "^\\d+$"
+    },
+    {
+      "name": "FAIL: shouldBeGreaterThan - value is not greater",
+      "input": "length([1, 2])",
+      "shouldBeGreaterThan": "5"
+    },
+    {
+      "name": "FAIL: shouldBeGreaterThan - equal values don't pass",
+      "input": "length([1, 2, 3])",
+      "shouldBeGreaterThan": "3"
+    },
+    {
+      "name": "FAIL: shouldBeLessThan - value is not less",
+      "input": "length([1, 2, 3, 4, 5])",
+      "shouldBeLessThan": "3"
+    },
+    {
+      "name": "FAIL: shouldBeLessThan - equal values don't pass",
+      "input": "length([1, 2])",
+      "shouldBeLessThan": "2"
+    },
+    {
+      "name": "FAIL: shouldBeEmpty - string is not empty",
+      "input": "concat('not', 'empty')",
+      "shouldBeEmpty": true
+    },
+    {
+      "name": "FAIL: shouldBeEmpty - array has elements",
+      "input": "[1, 2, 3]",
+      "shouldBeEmpty": true
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "description": "Examples demonstrating all available assertion types",
+  "tests": [
+    {
+      "name": "shouldBe - Exact match for string concatenation",
+      "input": "concat('hello', '-', 'world')",
+      "shouldBe": "'hello-world'"
+    },
+    {
+      "name": "shouldNotBe - Verify non-empty result",
+      "input": "concat('test', '123')",
+      "shouldNotBe": "''"
+    },
+    {
+      "name": "shouldContain - Check substring exists",
+      "input": "concat('prefix-', 'value', '-suffix')",
+      "shouldContain": "value"
+    },
+    {
+      "name": "shouldNotContain - Verify text is absent",
+      "input": "toLower('HELLO WORLD')",
+      "shouldNotContain": "UPPER"
+    },
+    {
+      "name": "shouldStartWith - Check string prefix",
+      "input": "concat('bicep', '-', 'testing')",
+      "shouldStartWith": "'bicep"
+    },
+    {
+      "name": "shouldEndWith - Check string suffix",
+      "input": "concat('file', '.', 'json')",
+      "shouldEndWith": "json'"
+    },
+    {
+      "name": "shouldMatch - Regex pattern for version string",
+      "input": "concat('v', '1', '.', '0', '.', '0')",
+      "shouldMatch": "^'v\\d+\\.\\d+\\.\\d+'"
+    },
+    {
+      "name": "shouldMatch - Regex for GUID pattern",
+      "input": "uniqueString('test-input-123')",
+      "shouldMatch": "^'[a-z0-9]+'"
+    },
+    {
+      "name": "shouldBeGreaterThan - Array length comparison",
+      "input": "length([1, 2, 3, 4, 5])",
+      "shouldBeGreaterThan": "3"
+    },
+    {
+      "name": "shouldBeGreaterThan - String length check",
+      "input": "length('testing')",
+      "shouldBeGreaterThan": "5"
+    },
+    {
+      "name": "shouldBeLessThan - Verify small array",
+      "input": "length([1, 2])",
+      "shouldBeLessThan": "5"
+    },
+    {
+      "name": "shouldBeLessThan - Numeric calculation",
+      "input": "length('hi')",
+      "shouldBeLessThan": "10"
+    },
+    {
+      "name": "shouldBeEmpty - Empty string check",
+      "input": "replace('test', 'test', '')",
+      "shouldBeEmpty": true
+    },
+    {
+      "name": "shouldBeEmpty - Empty array check",
+      "input": "[]",
+      "shouldBeEmpty": true
+    },
+    {
+      "name": "Combined - parseCidr with shouldContain",
+      "input": "parseCidr('10.0.0.0/16')",
+      "shouldContain": "cidr: 16"
+    },
+    {
+      "name": "Combined - parseCidr with shouldStartWith",
+      "input": "parseCidr('192.168.1.0/24')",
+      "shouldStartWith": "{"
+    },
+    {
+      "name": "Combined - String manipulation with shouldEndWith",
+      "input": "toUpper('azure')",
+      "shouldEndWith": "AZURE'"
+    },
+    {
+      "name": "Combined - Negative assertion with shouldNotContain",
+      "input": "replace('production-env', 'production', 'dev')",
+      "shouldNotContain": "production"
+    }
+  ]
+}

@@ -81,6 +81,13 @@ function Run-SingleTest {
     $shouldBe = $Test.shouldBe
     $shouldNotBe = $Test.shouldNotBe
     $shouldContain = $Test.shouldContain
+    $shouldNotContain = $Test.shouldNotContain
+    $shouldStartWith = $Test.shouldStartWith
+    $shouldEndWith = $Test.shouldEndWith
+    $shouldMatch = $Test.shouldMatch
+    $shouldBeGreaterThan = $Test.shouldBeGreaterThan
+    $shouldBeLessThan = $Test.shouldBeLessThan
+    $shouldBeEmpty = $Test.shouldBeEmpty
     $testDisplayName = if ($Test.name) { $Test.name } else { "Test $TestIndex" }
     
     if (-not $Quiet) {
@@ -159,9 +166,85 @@ $functionCall
             $assertionValue = $containsNormalized
             $passed = ($actual -like "*$containsNormalized*")
         }
+        elseif ($null -ne $shouldNotContain) {
+            # shouldNotContain: must not contain substring
+            $assertionType = "shouldNotContain"
+            $notContainsNormalized = Normalize-Output $shouldNotContain
+            $assertionValue = $notContainsNormalized
+            $passed = ($actual -notlike "*$notContainsNormalized*")
+        }
+        elseif ($null -ne $shouldStartWith) {
+            # shouldStartWith: starts with value
+            $assertionType = "shouldStartWith"
+            $startsWithNormalized = Normalize-Output $shouldStartWith
+            $assertionValue = $startsWithNormalized
+            $passed = ($actual -like "$startsWithNormalized*")
+        }
+        elseif ($null -ne $shouldEndWith) {
+            # shouldEndWith: ends with value
+            $assertionType = "shouldEndWith"
+            $endsWithNormalized = Normalize-Output $shouldEndWith
+            $assertionValue = $endsWithNormalized
+            $passed = ($actual -like "*$endsWithNormalized")
+        }
+        elseif ($null -ne $shouldMatch) {
+            # shouldMatch: regex pattern match
+            $assertionType = "shouldMatch"
+            $patternNormalized = Normalize-Output $shouldMatch
+            $assertionValue = $patternNormalized
+            try {
+                $passed = ($actual -match $patternNormalized)
+            }
+            catch {
+                Write-Host "    ✗ FAILED (Invalid Regex)" -ForegroundColor Red
+                Write-Host "    Error: Invalid regex pattern: $patternNormalized"
+                $script:FailedTests++
+                return $false
+            }
+        }
+        elseif ($null -ne $shouldBeGreaterThan) {
+            # shouldBeGreaterThan: numeric comparison
+            $assertionType = "shouldBeGreaterThan"
+            $assertionValue = $shouldBeGreaterThan
+            try {
+                $actualNumeric = [double]$actual
+                $expectedNumeric = [double]$shouldBeGreaterThan
+                $passed = ($actualNumeric -gt $expectedNumeric)
+            }
+            catch {
+                Write-Host "    ✗ FAILED (Not Numeric)" -ForegroundColor Red
+                Write-Host "    Error: Could not convert to numeric values for comparison"
+                Write-Host "    Actual: $actual"
+                $script:FailedTests++
+                return $false
+            }
+        }
+        elseif ($null -ne $shouldBeLessThan) {
+            # shouldBeLessThan: numeric comparison
+            $assertionType = "shouldBeLessThan"
+            $assertionValue = $shouldBeLessThan
+            try {
+                $actualNumeric = [double]$actual
+                $expectedNumeric = [double]$shouldBeLessThan
+                $passed = ($actualNumeric -lt $expectedNumeric)
+            }
+            catch {
+                Write-Host "    ✗ FAILED (Not Numeric)" -ForegroundColor Red
+                Write-Host "    Error: Could not convert to numeric values for comparison"
+                Write-Host "    Actual: $actual"
+                $script:FailedTests++
+                return $false
+            }
+        }
+        elseif ($null -ne $shouldBeEmpty) {
+            # shouldBeEmpty: check if result is empty
+            $assertionType = "shouldBeEmpty"
+            $assertionValue = "true"
+            $passed = ($actual -eq "''" -or $actual -eq '""' -or $actual -eq "[]" -or $actual -eq "{}" -or $actual.Trim() -eq "")
+        }
         else {
             Write-Host "    ✗ FAILED" -ForegroundColor Red
-            Write-Host "    Error: Test must have one of: shouldBe, shouldNotBe, or shouldContain"
+            Write-Host "    Error: Test must have one of: shouldBe, shouldNotBe, shouldContain, shouldNotContain, shouldStartWith, shouldEndWith, shouldMatch, shouldBeGreaterThan, shouldBeLessThan, shouldBeEmpty"
             $script:FailedTests++
             return $false
         }
@@ -187,6 +270,34 @@ $functionCall
                 "shouldContain" {
                     Write-Host "    Should contain: $assertionValue"
                     Write-Host "    Actual:         $actual"
+                }
+                "shouldNotContain" {
+                    Write-Host "    Should NOT contain: $assertionValue"
+                    Write-Host "    But actual was:     $actual"
+                }
+                "shouldStartWith" {
+                    Write-Host "    Should start with: $assertionValue"
+                    Write-Host "    Actual:            $actual"
+                }
+                "shouldEndWith" {
+                    Write-Host "    Should end with: $assertionValue"
+                    Write-Host "    Actual:          $actual"
+                }
+                "shouldMatch" {
+                    Write-Host "    Should match pattern: $assertionValue"
+                    Write-Host "    Actual:               $actual"
+                }
+                "shouldBeGreaterThan" {
+                    Write-Host "    Should be greater than: $assertionValue"
+                    Write-Host "    Actual:                 $actual"
+                }
+                "shouldBeLessThan" {
+                    Write-Host "    Should be less than: $assertionValue"
+                    Write-Host "    Actual:              $actual"
+                }
+                "shouldBeEmpty" {
+                    Write-Host "    Should be empty"
+                    Write-Host "    But actual was: $actual"
                 }
             }
             $script:FailedTests++
@@ -336,6 +447,13 @@ if ($Parallel) {
             $shouldBe = $Test.shouldBe
             $shouldNotBe = $Test.shouldNotBe
             $shouldContain = $Test.shouldContain
+            $shouldNotContain = $Test.shouldNotContain
+            $shouldStartWith = $Test.shouldStartWith
+            $shouldEndWith = $Test.shouldEndWith
+            $shouldMatch = $Test.shouldMatch
+            $shouldBeGreaterThan = $Test.shouldBeGreaterThan
+            $shouldBeLessThan = $Test.shouldBeLessThan
+            $shouldBeEmpty = $Test.shouldBeEmpty
             $testDisplayName = if ($Test.name) { $Test.name } else { "Test $TestIndex" }
             
             if (-not $Quiet) {
@@ -419,9 +537,97 @@ $functionCall
                     $expected = $containsNormalized
                     $passed = ($actual -like "*$containsNormalized*")
                 }
+                elseif ($null -ne $shouldNotContain) {
+                    $assertionType = "shouldNotContain"
+                    $notContainsNormalized = Normalize-Output $shouldNotContain
+                    $assertionValue = $notContainsNormalized
+                    $expected = $notContainsNormalized
+                    $passed = ($actual -notlike "*$notContainsNormalized*")
+                }
+                elseif ($null -ne $shouldStartWith) {
+                    $assertionType = "shouldStartWith"
+                    $startsWithNormalized = Normalize-Output $shouldStartWith
+                    $assertionValue = $startsWithNormalized
+                    $expected = $startsWithNormalized
+                    $passed = ($actual -like "$startsWithNormalized*")
+                }
+                elseif ($null -ne $shouldEndWith) {
+                    $assertionType = "shouldEndWith"
+                    $endsWithNormalized = Normalize-Output $shouldEndWith
+                    $assertionValue = $endsWithNormalized
+                    $expected = $endsWithNormalized
+                    $passed = ($actual -like "*$endsWithNormalized")
+                }
+                elseif ($null -ne $shouldMatch) {
+                    $assertionType = "shouldMatch"
+                    $patternNormalized = Normalize-Output $shouldMatch
+                    $assertionValue = $patternNormalized
+                    $expected = $patternNormalized
+                    try {
+                        $passed = ($actual -match $patternNormalized)
+                    }
+                    catch {
+                        Add-OutputLine "    ✗ FAILED (Invalid Regex)" "Red"
+                        Add-OutputLine "    Error: Invalid regex pattern: $patternNormalized" "Red"
+                        return @{
+                            passed = $false
+                            testName = $testName
+                            testIndex = $TestIndex
+                            testDisplayName = $testDisplayName
+                        }
+                    }
+                }
+                elseif ($null -ne $shouldBeGreaterThan) {
+                    $assertionType = "shouldBeGreaterThan"
+                    $assertionValue = $shouldBeGreaterThan
+                    $expected = $shouldBeGreaterThan
+                    try {
+                        $actualNumeric = [double]$actual
+                        $expectedNumeric = [double]$shouldBeGreaterThan
+                        $passed = ($actualNumeric -gt $expectedNumeric)
+                    }
+                    catch {
+                        Add-OutputLine "    ✗ FAILED (Not Numeric)" "Red"
+                        Add-OutputLine "    Error: Could not convert to numeric values for comparison" "Red"
+                        Add-OutputLine "    Actual: $actual" "Red"
+                        return @{
+                            passed = $false
+                            testName = $testName
+                            testIndex = $TestIndex
+                            testDisplayName = $testDisplayName
+                        }
+                    }
+                }
+                elseif ($null -ne $shouldBeLessThan) {
+                    $assertionType = "shouldBeLessThan"
+                    $assertionValue = $shouldBeLessThan
+                    $expected = $shouldBeLessThan
+                    try {
+                        $actualNumeric = [double]$actual
+                        $expectedNumeric = [double]$shouldBeLessThan
+                        $passed = ($actualNumeric -lt $expectedNumeric)
+                    }
+                    catch {
+                        Add-OutputLine "    ✗ FAILED (Not Numeric)" "Red"
+                        Add-OutputLine "    Error: Could not convert to numeric values for comparison" "Red"
+                        Add-OutputLine "    Actual: $actual" "Red"
+                        return @{
+                            passed = $false
+                            testName = $testName
+                            testIndex = $TestIndex
+                            testDisplayName = $testDisplayName
+                        }
+                    }
+                }
+                elseif ($null -ne $shouldBeEmpty) {
+                    $assertionType = "shouldBeEmpty"
+                    $assertionValue = "true"
+                    $expected = "empty"
+                    $passed = ($actual -eq "''" -or $actual -eq '""' -or $actual -eq "[]" -or $actual -eq "{}" -or $actual.Trim() -eq "")
+                }
                 else {
                     Add-OutputLine "    ✗ FAILED" "Red"
-                    Add-OutputLine "    Error: Test must have one of: shouldBe, shouldNotBe, or shouldContain" "Red"
+                    Add-OutputLine "    Error: Test must have one of: shouldBe, shouldNotBe, shouldContain, shouldNotContain, shouldStartWith, shouldEndWith, shouldMatch, shouldBeGreaterThan, shouldBeLessThan, shouldBeEmpty" "Red"
                     return @{
                         passed = $false
                         testName = $testName
@@ -455,6 +661,34 @@ $functionCall
                         "shouldContain" {
                             Add-OutputLine "    Should contain: $assertionValue" "Red"
                             Add-OutputLine "    Actual:         $actual" "Red"
+                        }
+                        "shouldNotContain" {
+                            Add-OutputLine "    Should NOT contain: $assertionValue" "Red"
+                            Add-OutputLine "    But actual was:     $actual" "Red"
+                        }
+                        "shouldStartWith" {
+                            Add-OutputLine "    Should start with: $assertionValue" "Red"
+                            Add-OutputLine "    Actual:            $actual" "Red"
+                        }
+                        "shouldEndWith" {
+                            Add-OutputLine "    Should end with: $assertionValue" "Red"
+                            Add-OutputLine "    Actual:          $actual" "Red"
+                        }
+                        "shouldMatch" {
+                            Add-OutputLine "    Should match pattern: $assertionValue" "Red"
+                            Add-OutputLine "    Actual:               $actual" "Red"
+                        }
+                        "shouldBeGreaterThan" {
+                            Add-OutputLine "    Should be greater than: $assertionValue" "Red"
+                            Add-OutputLine "    Actual:                 $actual" "Red"
+                        }
+                        "shouldBeLessThan" {
+                            Add-OutputLine "    Should be less than: $assertionValue" "Red"
+                            Add-OutputLine "    Actual:              $actual" "Red"
+                        }
+                        "shouldBeEmpty" {
+                            Add-OutputLine "    Should be empty" "Red"
+                            Add-OutputLine "    But actual was: $actual" "Red"
                         }
                     }
                     return @{
