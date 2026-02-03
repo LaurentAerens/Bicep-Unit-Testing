@@ -8,7 +8,14 @@
       "functionCall": "(Optional) Function call expression when using bicepFile (e.g., myFunc(param1, param2))",
       "shouldBe": "(Optional) Expected exact output - test passes if actual equals this value",
       "shouldNotBe": "(Optional) Value that output must NOT equal - test passes if actual differs from this",
-      "shouldContain": "(Optional) Text that must appear in output - test passes if actual contains this"
+      "shouldContain": "(Optional) Text that must appear in output - test passes if actual contains this",
+      "shouldNotContain": "(Optional) Text that must NOT appear in output - test passes if actual does not contain this",
+      "shouldStartWith": "(Optional) Text that output must start with - test passes if actual starts with this value",
+      "shouldEndWith": "(Optional) Text that output must end with - test passes if actual ends with this value",
+      "shouldMatch": "(Optional) Regex pattern that output must match - test passes if actual matches the pattern",
+      "shouldBeGreaterThan": "(Optional) Numeric value - test passes if actual is greater than this value",
+      "shouldBeLessThan": "(Optional) Numeric value - test passes if actual is less than this value",
+      "shouldBeEmpty": "(Optional) Set to true - test passes if output is empty string, empty array, or empty object"
     }
   ]
 }

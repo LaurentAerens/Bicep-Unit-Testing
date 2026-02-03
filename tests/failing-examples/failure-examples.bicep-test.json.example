@@ -1,5 +1,5 @@
 {
-  "description": "Example showing how different assertion types report failures (moved to ignored folder)",
+  "description": "Legacy failure examples - see all-assertion-failures.bicep-test.json.example for comprehensive examples",
   "tests": [
     {
       "name": "Intentional fail - incorrect shouldBe for length",
