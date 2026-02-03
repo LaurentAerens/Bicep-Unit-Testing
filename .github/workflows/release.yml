@@ -1,0 +1,97 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      increment:
+        description: 'Version increment type'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+  push:
+    branches:
+      - 'release/**'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v1.1.1
+        with:
+          versionSpec: '5.x'
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v1.1.1
+        with:
+          useConfigFile: true
+
+      - name: Display GitVersion outputs
+        run: |
+          echo "Major: ${{ steps.gitversion.outputs.major }}"
+          echo "Minor: ${{ steps.gitversion.outputs.minor }}"
+          echo "Patch: ${{ steps.gitversion.outputs.patch }}"
+          echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
+          echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
+          echo "InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
+
+      - name: Install Bicep CLI
+        run: |
+          curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+          chmod +x bicep
+          sudo mv bicep /usr/local/bin/bicep
+          bicep --version
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          ./framework/run-tests.ps1 -VerboseOutput
+
+      - name: Create Release Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.gitversion.outputs.semVer }}" -m "Release v${{ steps.gitversion.outputs.semVer }}"
+          git push origin "v${{ steps.gitversion.outputs.semVer }}"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.gitversion.outputs.semVer }}
+          release_name: Release v${{ steps.gitversion.outputs.semVer }}
+          body: |
+            ## Bicep Unit Testing Framework v${{ steps.gitversion.outputs.semVer }}
+            
+            ### What's Changed
+            - See commit history for details
+            
+            ### Version Information
+            - **Version**: ${{ steps.gitversion.outputs.semVer }}
+            - **Full Version**: ${{ steps.gitversion.outputs.fullSemVer }}
+            - **Branch**: ${{ github.ref_name }}
+            
+            ### Installation
+            ```bash
+            git clone https://github.com/${{ github.repository }}.git
+            cd Bicep-Unit-Testing
+            git checkout v${{ steps.gitversion.outputs.semVer }}
+            ```
+          draft: false
+          prerelease: false
