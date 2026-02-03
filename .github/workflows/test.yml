@@ -3,12 +3,8 @@ name: Run Bicep Function Tests
 on:
   push:
     branches: [ main, master ]
-    paths-ignore:
-      - 'tests/ignored/**'
   pull_request:
     branches: [ main, master ]
-    paths-ignore:
-      - 'tests/ignored/**'
   workflow_dispatch:
 
 permissions:
