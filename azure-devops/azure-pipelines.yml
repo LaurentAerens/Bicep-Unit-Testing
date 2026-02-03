@@ -35,7 +35,7 @@ jobs:
 
   - pwsh: |
       $env:PATH = "/usr/local/bin:$env:PATH"
-      ./framework/run-tests.ps1 -Parallel -VerboseOutput
+      ./run-tests.ps1 -Parallel
     displayName: 'Run Bicep function tests (framework)'
 
   - task: PublishTestResults@2

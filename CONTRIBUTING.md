@@ -1,224 +1,126 @@
-# Contributing to Bicep Function Unit Testing
+# Contributing to Bicep Unit Testing Framework
 
-Thank you for your interest in contributing! This guide will help you add new tests and improve the framework.
+Thank you for your interest in contributing to the test framework! This guide covers contributing to the framework itself (PowerShell test runner, helper scripts, and documentation).
 
-## Adding New Tests
+**Note:** If you're just looking to add tests for your own Bicep functions, see the [Quick Start Guide](./docs/quick-start.md) instead.
 
-### Quick Steps
-
-1. **Create a test file** in the `tests` directory with the `.bicep-test.json` extension
-2. **Define your test** with input and expected output
-3. **Run tests locally** to verify
-4. **Submit a pull request**
-
-### Test File Format
-
-Two formats are supported:
-
-#### Format 1: Inline Expression (for built-in functions)
-
-```json
-{
-  "description": "Clear description of what you're testing",
-  "input": "The Bicep expression to evaluate",
-  "expected": "The expected output from bicep console"
-}
-```
-
-#### Format 2: Bicep File Reference (for custom functions)
-
-```json
-{
-  "description": "Clear description of what you're testing",
-  "bicepFile": "path/to/functions.bicep",
-  "functionCall": "myFunction(param1, param2)",
-  "expected": "The expected output from bicep console"
-}
-```
-
-**When to use each format:**
-- Use **inline expression** for testing built-in Bicep functions
-- Use **Bicep file reference** for testing custom functions defined in `.bicep` files
-  - This allows reusing function definitions across multiple tests
-  - Better organization for complex function libraries
-
-### Using Helper Scripts
-
-To get the correct expected output, use the helper script:
-
-**Linux/macOS:**
-```bash
-./get-expected-output.sh "your-bicep-expression"
-```
-
-**Windows:**
-```powershell
-.\get-expected-output.ps1 "your-bicep-expression"
-```
-
-This will show you exactly what to put in the `expected` field.
-
-### Example Workflow
-
-**For Built-in Functions:**
-
-1. **Test your expression manually:**
-   ```bash
-   echo "length([1, 2, 3])" | bicep console
-   ```
-
-2. **Get the formatted output:**
-   ```bash
-   ./get-expected-output.sh "length([1, 2, 3])"
-   ```
-
-3. **Create your test file** (`tests/my-test.bicep-test.json`):
-   ```json
-   {
-     "description": "Test length of array with 3 elements",
-     "input": "length([1, 2, 3])",
-     "expected": "3"
-   }
-   ```
-
-4. **Run the tests:**
-   ```bash
-   ./run-tests.sh
-   ```
-
-**For Custom Functions:**
-
-1. **Create a Bicep file with your functions** (`bicep-functions/my-functions.bicep`):
-   ```bicep
-   func add(a int, b int) int => a + b
-   func multiply(a int, b int) int => a * b
-   ```
-
-2. **Test the function manually:**
-   ```bash
-   cat bicep-functions/my-functions.bicep <(echo "add(5, 3)") | bicep console
-   ```
-
-3. **Create your test file** (`tests/my-add-test.bicep-test.json`):
-   ```json
-   {
-     "description": "Test custom add function",
-     "bicepFile": "bicep-functions/my-functions.bicep",
-     "functionCall": "add(5, 3)",
-     "expected": "8"
-   }
-   ```
-
-4. **Run the tests:**
-   ```bash
-   ./run-tests.sh
-   ```
-
-## Test Categories
-
-Consider adding tests for:
-
-### String Functions
-- `concat()`, `contains()`, `startsWith()`, `endsWith()`
-- `toLower()`, `toUpper()`, `trim()`
-- `replace()`, `substring()`, `split()`, `join()`
-
-### Array Functions
-- `length()`, `concat()`, `contains()`, `indexOf()`
-- `first()`, `last()`, `skip()`, `take()`
-- `union()`, `intersection()`, `difference()`
-
-### Object Functions
-- `contains()`, `length()`, `json()`
-- `union()`, `intersection()`
-
-### Network Functions
-- `parseCidr()`, `cidrSubnet()`, `cidrHost()`
-
-### Custom Functions
-- Define custom functions in `.bicep` files in the `bicep-functions` directory
-- Test naming conventions, validation logic, and helper utilities
-- Examples: resource naming functions, environment validators, tag generators
-
-### Utility Functions
-- `uniqueString()`, `guid()`, `base64()`
-- `uri()`, `uriComponent()`
-
-### Edge Cases
-- Empty arrays: `length([])`
-- Empty strings: `length('')`
-- Null values and error conditions
-- Boundary conditions
-
-## Best Practices
-
-1. **One test per file**: Keep tests focused and isolated
-2. **Descriptive names**: Use clear file names like `concat-arrays.bicep-test.json`
-3. **Good descriptions**: Explain what the test validates
-4. **Test edge cases**: Include boundary conditions and error cases
-5. **Keep it simple**: Test one thing at a time
-
-## Testing Your Changes
-
-Before submitting a PR, ensure:
-
-1. **All tests pass locally:**
-   ```bash
-   ./run-tests.sh
-   ```
-
-2. **Tests work on both platforms** (if possible):
-   ```bash
-   ./run-tests.sh    # Bash
-   pwsh ./run-tests.ps1  # PowerShell
-   ```
-
-3. **New tests are properly formatted** (valid JSON)
-
-4. **Tests are deterministic** (same input always produces same output)
-
-## Improving the Framework
-
-We welcome improvements to:
-- Test runner scripts (bash/PowerShell)
-- GitHub Actions workflow
-- Documentation
-- Helper utilities
-- Error handling and reporting
-
-### Development Setup
+## Development Setup
 
 1. Fork the repository
-2. Clone your fork
-3. Create a feature branch
-4. Make your changes
-5. Test thoroughly
-6. Submit a pull request
+2. Clone your fork locally
+3. Open in VS Code or PowerShell ISE
+4. Ensure you have:
+   - PowerShell 7+ (pwsh)
+   - Bicep CLI v0.40.2 or later
+   - Git for version control
 
-## Code Style
+## Project Structure
 
-### Bash Scripts
-- Use shellcheck for linting
-- Follow existing code style
-- Add comments for complex logic
+The framework consists of:
+- **PowerShell Scripts**: Main test runner and helper utilities
+- **Documentation**: Guides and references in `docs/`
+- **Example Tests**: Sample test files showing usage
+
+## Contributing Areas
+
+### PowerShell Test Runner
+
+The core of the project is the test runner script. Improvements welcome for:
+- Performance optimization
+- Error handling and messages
+- New assertion types
+- Parallel execution improvements
+- Exit code handling
+
+When modifying the runner:
+1. Test thoroughly with existing test suite
+2. Ensure backward compatibility with JSON format
+3. Update documentation if behavior changes
+4. Follow PowerShell best practices
+
+### Helper Utilities
+
+- `get-expected-output.ps1` - Formats bicep console output
+- Other helper scripts improving the testing experience
+
+### Documentation
+
+- Guides in `docs/` folder
+- README and quick-start guides
+- Examples and use cases
+- CI/CD integration examples
+
+See [docs/index.md](./docs/index.md) for structure.
+
+## Code Standards
 
 ### PowerShell Scripts
-- Follow PowerShell best practices
-- Use approved verbs
-- Include help documentation
+- Use `Set-StrictMode -Version Latest` for safety
+- Include comment-based help documentation
+- Use approved verbs (Get-, Test-, etc.)
+- Follow [PowerShell naming conventions](https://learn.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-powershell-commands)
+- Handle errors gracefully with proper exit codes
 
-### JSON Test Files
-- Use 2-space indentation
-- Validate JSON syntax
-- Keep formatting consistent
+### Documentation
+- Keep guides focused on one topic
+- Use clear, concise language
+- Include practical examples
+- Link to related documentation
+- Use code blocks for commands and output
+
+## Testing Changes
+
+Before submitting a PR:
+
+1. **Run the full test suite:**
+   ```powershell
+   .\run-tests.ps1 -Parallel
+   ```
+
+2. **Test with various scenarios:**
+   ```powershell
+   # Verbose output
+   .\run-tests.ps1 -Verbose
+   
+   # Quiet mode
+   .\run-tests.ps1 -Quiet
+   
+   # With custom test directory
+   .\run-tests.ps1 -TestDir ./tests
+   ```
+
+3. **Verify exit codes:**
+   ```powershell
+   .\run-tests.ps1
+   if ($LASTEXITCODE -eq 0) { Write-Host "Pass" } else { Write-Host "Fail: $LASTEXITCODE" }
+   ```
+
+## Submission Process
+
+1. Create a feature branch from `main`
+2. Make focused, well-documented changes
+3. Test thoroughly
+4. Submit a pull request with:
+   - Clear description of changes
+   - Why the change is needed
+   - How you tested it
+   - Any breaking changes (note these clearly)
+
+## Code Review
+
+PRs are reviewed for:
+- Code quality and standards
+- Backward compatibility
+- Test coverage
+- Documentation updates
+- PowerShell best practices
 
 ## Questions?
 
-If you have questions or need help:
-1. Check the [README.md](README.md) for documentation
-2. Look at existing tests for examples
-3. Open an issue for discussion
+- Check existing [documentation](./docs/)
+- Review the PowerShell script for implementation details
+- Open an issue to discuss ideas before starting major work
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the  GNU GPL v3 License.

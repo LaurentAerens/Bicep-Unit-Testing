@@ -30,4 +30,4 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "/usr/local/bin:$env:PATH"
-          ./framework/run-tests.ps1 -Parallel -VerboseOutput
+          ./run-tests.ps1 -Parallel
