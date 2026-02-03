@@ -4,7 +4,7 @@ Get up and running with Bicep unit testing in minutes.
 
 ## Prerequisites
 
-- [Bicep CLI](https://github.com/Azure/bicep) v0.40.0 or later (with console stdin/stdout support)
+- [Bicep CLI](https://github.com/Azure/bicep) v0.40.2 or later (with console stdin/stdout support)
 - Bash (for Linux/macOS) or PowerShell (for Windows)
 - `jq` (for Bash script only - usually pre-installed on most systems)
 

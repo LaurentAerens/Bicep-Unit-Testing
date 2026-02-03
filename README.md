@@ -50,7 +50,7 @@ Bicep-Unit-Testing/
 
 ## Prerequisites
 
-- **Bicep CLI** v0.42.0 or later - [Installation Instructions](./docs/quick-start.md#installing-bicep-cli)
+- **Bicep CLI** v0.40.2 or later - [Installation Instructions](./docs/quick-start.md#installing-bicep-cli)
 - **Bash** (Linux/macOS) or **PowerShell** (Windows)
 - **jq** (Bash only, usually pre-installed)
 
