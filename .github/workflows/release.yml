@@ -6,12 +6,12 @@ on:
       increment:
         description: 'Version increment type'
         required: true
-        default: 'minor'
+        default: 'Minor'
         type: choice
         options:
-          - major
-          - minor
-          - patch
+          - Major
+          - Minor
+          - Patch
   push:
     branches:
       - 'release/**'
