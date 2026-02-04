@@ -5,7 +5,7 @@ branches:
     regex: ^main$|^master$
     mode: ContinuousDelivery
     tag: ''
-    increment: Inherit
+    increment: None
     is-mainline: true
     is-release-branch: true
   release:
