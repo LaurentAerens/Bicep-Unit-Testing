@@ -39,6 +39,7 @@ jobs:
           git checkout -b release/${{ github.event.inputs.increment }}
 
       - name: Update GitVersion Config
+        shell: pwsh
         run: |
           $increment = "${{ github.event.inputs.increment }}"
           $increment = [char]::ToUpper($increment[0]) + $increment.Substring(1)
