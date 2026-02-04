@@ -1,35 +1,35 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 
 <#
 .SYNOPSIS
     Bicep Function Unit Test Runner
-    
+
 .DESCRIPTION
     This script runs unit tests for Bicep functions using the bicep console feature.
-    
+
 .PARAMETER TestDir
     Directory containing test files (default: ./tests)
-    
+
 .PARAMETER VerboseOutput
     Enable verbose output
-    
+
 .PARAMETER Quiet
     Quiet mode - only show summary
-    
+
 .PARAMETER Parallel
     Run tests in parallel (default: uses number of CPU cores)
-    
+
 .PARAMETER MaxParallelJobs
     Maximum number of concurrent jobs when running in parallel
-    
+
 .EXAMPLE
     ./run-tests.ps1
     Run all tests in ./tests directory
-    
+
 .EXAMPLE
     ./run-tests.ps1 -TestDir ./my-tests
     Run tests from ./my-tests directory
-    
+
 .EXAMPLE
     ./run-tests.ps1 -VerboseOutput
     Run tests with verbose output
@@ -59,15 +59,15 @@ function ConvertTo-NormalizedOutput {
         Normalizes bicep console output for comparison
     #>
     param([string]$Output)
-    
+
     $Output = $Output -replace "`r", ""
-    
-    $lines = $Output -split "`n" | Where-Object { 
+
+    $lines = $Output -split "`n" | Where-Object {
         $_ -notmatch "WARNING: The 'console' CLI command is an experimental feature" -and
         $_ -notmatch "Experimental features should be used for testing purposes only" -and
         $_.Trim() -ne ""
     }
-    
+
     return ($lines -join "`n").Trim()
 }
 
@@ -135,7 +135,7 @@ function Invoke-Assertion {
         [string]$Expected,
         [hashtable]$AssertionConfig
     )
-    
+
     $config = $AssertionConfig[$AssertionType]
     if (-not $config) {
         return @{
@@ -143,26 +143,26 @@ function Invoke-Assertion {
             Error = "Unknown assertion type: $AssertionType"
         }
     }
-    
+
     $normalizedExpected = if ($config.NoExpectedValue) { $null } else { ConvertTo-NormalizedOutput $Expected }
-    
+
     try {
         if ($config.ValidateFirst) {
             # Test regex validity first
-            try { $null = "" -match $normalizedExpected } catch { 
+            try { $null = "" -match $normalizedExpected } catch {
                 return @{ Passed = $false; Error = "Invalid regex pattern: $normalizedExpected" }
             }
         }
-        
+
         if ($config.NumericComparison) {
             try { $null = [double]$Actual } catch {
                 return @{ Passed = $false; Error = "Could not convert to numeric values for comparison`n    Actual: $Actual" }
             }
         }
-        
+
         $passed = & $config.Evaluate $Actual $normalizedExpected
         $failureMessage = if (-not $passed) { & $config.FormatFailure $normalizedExpected $Actual } else { $null }
-        
+
         return @{
             Passed = $passed
             FailureMessage = $failureMessage
@@ -184,22 +184,21 @@ function Get-TestInput {
         Resolves the input expression for a test (inline or from bicep file)
     #>
     param(
-        [object]$Test,
-        [bool]$ShowVerbose
+        [object]$Test
     )
-    
+
     $bicepFile = $Test.bicepFile
     $functionCall = $Test.functionCall
     $inputExpr = $Test.input
-    
+
     if ($bicepFile -and $functionCall) {
         if (-not (Test-Path $bicepFile)) {
             return @{ Success = $false; Error = "Bicep file not found: $bicepFile" }
         }
-        
+
         $bicepContent = Get-Content $bicepFile -Raw
         $resolvedInput = "$bicepContent`n$functionCall"
-        
+
         return @{
             Success = $true
             Input = $resolvedInput
@@ -224,20 +223,20 @@ function Find-AssertionInTest {
         Finds the assertion type and value defined in a test
     #>
     param([object]$Test)
-    
+
     $assertionTypes = @(
         'shouldBe', 'shouldNotBe', 'shouldContain', 'shouldNotContain',
         'shouldStartWith', 'shouldEndWith', 'shouldMatch',
         'shouldBeGreaterThan', 'shouldBeLessThan', 'shouldBeEmpty'
     )
-    
+
     foreach ($type in $assertionTypes) {
         $value = $Test.$type
         if ($null -ne $value) {
             return @{ Type = $type; Value = $value }
         }
     }
-    
+
     return $null
 }
 
@@ -247,7 +246,7 @@ function Invoke-BicepConsole {
         Executes bicep console and returns normalized output
     #>
     param([string]$BicepExpression)
-    
+
     $rawOutput = $BicepExpression | bicep console 2>&1 | Out-String
     return ConvertTo-NormalizedOutput $rawOutput
 }
@@ -262,18 +261,18 @@ function ConvertTo-TestResult {
         [int]$TestIndex,
         [string]$DisplayName,
         [bool]$Passed,
-        [string]$Error,
+        [string]$ErrorMsg,
         [string]$FailureMessage,
         [string]$AssertionType,
         [string]$Actual
     )
-    
+
     return @{
         TestName = $TestName
         TestIndex = $TestIndex
         DisplayName = $DisplayName
         Passed = $Passed
-        Error = $Error
+        Error = $ErrorMsg
         FailureMessage = $FailureMessage
         AssertionType = $AssertionType
         Actual = $Actual
@@ -295,24 +294,24 @@ function Invoke-SingleTest {
         [int]$TestIndex,
         [bool]$ShowVerbose
     )
-    
+
     $displayName = if ($Test.name) { $Test.name } else { "Test $TestIndex" }
     $assertionConfig = Get-AssertionConfig
-    
+
     # Get test input
     $inputResult = Get-TestInput -Test $Test -ShowVerbose $ShowVerbose
     if (-not $inputResult.Success) {
         return ConvertTo-TestResult -TestName $TestName -TestIndex $TestIndex -DisplayName $displayName `
             -Passed $false -Error $inputResult.Error
     }
-    
+
     # Find assertion
     $assertion = Find-AssertionInTest -Test $Test
     if (-not $assertion) {
         return ConvertTo-TestResult -TestName $TestName -TestIndex $TestIndex -DisplayName $displayName `
             -Passed $false -Error "Test must have one of: shouldBe, shouldNotBe, shouldContain, shouldNotContain, shouldStartWith, shouldEndWith, shouldMatch, shouldBeGreaterThan, shouldBeLessThan, shouldBeEmpty"
     }
-    
+
     # Execute bicep console
     try {
         $actual = Invoke-BicepConsole -BicepExpression $inputResult.Input
@@ -321,16 +320,16 @@ function Invoke-SingleTest {
         return ConvertTo-TestResult -TestName $TestName -TestIndex $TestIndex -DisplayName $displayName `
             -Passed $false -Error $_.Exception.Message
     }
-    
+
     # Run assertion
     $assertionResult = Invoke-Assertion -AssertionType $assertion.Type -Actual $actual `
         -Expected $assertion.Value -AssertionConfig $assertionConfig
-    
+
     if ($assertionResult.Error) {
         return ConvertTo-TestResult -TestName $TestName -TestIndex $TestIndex -DisplayName $displayName `
             -Passed $false -Error $assertionResult.Error -Actual $actual
     }
-    
+
     return ConvertTo-TestResult -TestName $TestName -TestIndex $TestIndex -DisplayName $displayName `
         -Passed $assertionResult.Passed -FailureMessage $assertionResult.FailureMessage `
         -AssertionType $assertion.Type -Actual $actual
@@ -342,10 +341,10 @@ function ConvertTo-TestObject {
         Converts legacy test format or raw test data to standardized test object
     #>
     param([object]$TestData)
-    
+
     # If it's already a PSCustomObject from JSON, convert relevant properties
     $test = @{}
-    
+
     # Handle input/bicepFile+functionCall
     if ($TestData.PSObject.Properties.Name -contains 'input' -and $TestData.input) {
         $test.input = $TestData.input
@@ -359,23 +358,23 @@ function ConvertTo-TestObject {
     if ($TestData.PSObject.Properties.Name -contains 'name' -and $TestData.name) {
         $test.name = $TestData.name
     }
-    
+
     # Handle assertions - check for 'expected' (legacy) or new assertion types
     if ($TestData.PSObject.Properties.Name -contains 'expected' -and $null -ne $TestData.expected) {
         $test.shouldBe = $TestData.expected
     }
-    
+
     # Copy over all assertion types if present
     $assertionTypes = @('shouldBe', 'shouldNotBe', 'shouldContain', 'shouldNotContain',
-        'shouldStartWith', 'shouldEndWith', 'shouldMatch', 'shouldBeGreaterThan', 
+        'shouldStartWith', 'shouldEndWith', 'shouldMatch', 'shouldBeGreaterThan',
         'shouldBeLessThan', 'shouldBeEmpty')
-    
+
     foreach ($assertionType in $assertionTypes) {
         if ($TestData.PSObject.Properties.Name -contains $assertionType -and $null -ne $TestData.$assertionType) {
             $test.$assertionType = $TestData.$assertionType
         }
     }
-    
+
     return [PSCustomObject]$test
 }
 
@@ -388,11 +387,11 @@ function Invoke-TestFile {
         [string]$TestFile,
         [bool]$ShowVerbose
     )
-    
+
     $testName = [System.IO.Path]::GetFileNameWithoutExtension($TestFile) -replace '\.bicep-test$', ''
     $testData = Get-Content $TestFile -Raw | ConvertFrom-Json
     $results = @()
-    
+
     # Determine test format and get tests
     $tests = if ($testData.PSObject.Properties.Name -contains 'tests') {
         # New format: multiple tests in array
@@ -402,7 +401,7 @@ function Invoke-TestFile {
         # Legacy format - single test at root level
         @(ConvertTo-TestObject -TestData $testData)
     }
-    
+
     if ($tests.Count -eq 0) {
         return @{
             TestName = $testName
@@ -411,12 +410,12 @@ function Invoke-TestFile {
             Warning = "No tests defined in file"
         }
     }
-    
+
     for ($i = 0; $i -lt $tests.Count; $i++) {
         $result = Invoke-SingleTest -Test $tests[$i] -TestName $testName -TestIndex ($i + 1) -ShowVerbose $ShowVerbose
         $results += $result
     }
-    
+
     return @{
         TestName = $testName
         Description = $testData.description
@@ -437,11 +436,11 @@ function Write-TestResult {
         [object]$Result,
         [bool]$Quiet
     )
-    
+
     if (-not $Quiet) {
         Write-Host "  [$($Result.TestIndex)] $($Result.DisplayName)" -ForegroundColor Cyan
     }
-    
+
     if ($Result.Passed) {
         if (-not $Quiet) {
             Write-Host "    ✓ PASSED" -ForegroundColor Green
@@ -458,32 +457,62 @@ function Write-TestResult {
     }
 }
 
-function Write-TestFileResults {
+function Write-TestResult {
     <#
     .SYNOPSIS
         Writes all results for a test file to the console
     #>
     param(
         [object]$FileResult,
-        [bool]$Quiet,
-        [bool]$ShowVerbose
+        [bool]$Quiet
     )
-    
+
     if (-not $Quiet) {
         Write-Host "`nRunning test: $($FileResult.TestName)" -ForegroundColor Yellow
     }
-    
-    if ($ShowVerbose -and $FileResult.Description) {
+
+    if ($FileResult.Description) {
         Write-Host "  Description: $($FileResult.Description)"
     }
-    
+
     if ($FileResult.Warning) {
         Write-Host "  ✗ WARNING: $($FileResult.Warning)" -ForegroundColor Yellow
         return
     }
-    
+
     foreach ($result in $FileResult.Results) {
-        Write-TestResult -Result $result -Quiet $Quiet
+        Write-SingleTestResult -Result $result -Quiet $Quiet
+    }
+}
+
+function Write-SingleTestResult {
+    <#
+    .SYNOPSIS
+        Writes a single test result to the console
+    #>
+    param(
+        [object]$Result,
+        [bool]$Quiet
+    )
+
+    if ($Quiet) { return }
+
+    $testNum = $Result.TestIndex
+    $testName = $Result.DisplayName
+
+    Write-Host "    [$testNum] $testName"
+
+    if ($Result.Passed) {
+        Write-Host "      ✓ PASSED" -ForegroundColor Green
+    }
+    else {
+        Write-Host "      ✗ FAILED" -ForegroundColor Red
+        if ($Result.FailureMessage) {
+            Write-Host "        $($Result.FailureMessage)" -ForegroundColor Red
+        }
+        if ($Result.Error) {
+            Write-Host "        Error: $($Result.Error)" -ForegroundColor Red
+        }
     }
 }
 
@@ -497,7 +526,7 @@ function Write-TestSummary {
         [int]$Passed,
         [int]$Failed
     )
-    
+
     Write-Host ""
     Write-Host "================================================"
     Write-Host "Test Summary"
@@ -512,7 +541,7 @@ function Write-TestSummary {
 
 #region Main Execution
 
-function Test-Prerequisites {
+function Test-Prerequisite {
     <#
     .SYNOPSIS
         Validates that all prerequisites are met before running tests
@@ -521,7 +550,7 @@ function Test-Prerequisites {
         [string]$TestDirectory,
         [bool]$ShowVerbose
     )
-    
+
     # Check if bicep is installed
     try {
         $bicepVersion = bicep --version 2>&1
@@ -533,13 +562,13 @@ function Test-Prerequisites {
         Write-Host "Error: bicep CLI is not installed or not in PATH" -ForegroundColor Red
         return $false
     }
-    
+
     # Check if test directory exists
     if (-not (Test-Path $TestDirectory)) {
         Write-Host "Error: Test directory '$TestDirectory' does not exist" -ForegroundColor Red
         return $false
     }
-    
+
     return $true
 }
 
@@ -553,15 +582,15 @@ function Invoke-TestsSequential {
         [bool]$ShowVerbose,
         [bool]$Quiet
     )
-    
+
     $allResults = @()
-    
+
     foreach ($testFile in $TestFiles) {
         $fileResult = Invoke-TestFile -TestFile $testFile.FullName -ShowVerbose $ShowVerbose
-        Write-TestFileResults -FileResult $fileResult -Quiet $Quiet -ShowVerbose $ShowVerbose
+        Write-TestResult -FileResult $fileResult -Quiet $Quiet
         $allResults += $fileResult.Results
     }
-    
+
     return $allResults
 }
 
@@ -576,29 +605,25 @@ function Invoke-TestsParallel {
         [bool]$Quiet,
         [int]$ThrottleLimit
     )
-    
+
     # Export the script content for use in parallel runspaces
-    $scriptPath = $PSScriptRoot
-    
     $parallelResults = $TestFiles | ForEach-Object -Parallel {
         $testFile = $_
-        $verboseMode = $using:ShowVerbose
-        $scriptDir = $using:scriptPath
-        
+
         # Re-import necessary functions in parallel scope
         # (PowerShell parallel runspaces don't share function definitions)
-        
+
         function ConvertTo-NormalizedOutput {
             param([string]$Output)
             $Output = $Output -replace "`r", ""
-            $lines = $Output -split "`n" | Where-Object { 
+            $lines = $Output -split "`n" | Where-Object {
                 $_ -notmatch "WARNING: The 'console' CLI command is an experimental feature" -and
                 $_ -notmatch "Experimental features should be used for testing purposes only" -and
                 $_.Trim() -ne ""
             }
             return ($lines -join "`n").Trim()
         }
-        
+
         function Get-AssertionConfig {
             return @{
                 shouldBe = @{
@@ -647,11 +672,11 @@ function Invoke-TestsParallel {
                 }
             }
         }
-        
+
         function Find-AssertionInTest {
             param([object]$Test)
             $assertionTypes = @('shouldBe', 'shouldNotBe', 'shouldContain', 'shouldNotContain',
-                'shouldStartWith', 'shouldEndWith', 'shouldMatch', 'shouldBeGreaterThan', 
+                'shouldStartWith', 'shouldEndWith', 'shouldMatch', 'shouldBeGreaterThan',
                 'shouldBeLessThan', 'shouldBeEmpty')
             foreach ($type in $assertionTypes) {
                 $value = $Test.$type
@@ -659,18 +684,18 @@ function Invoke-TestsParallel {
             }
             return $null
         }
-        
+
         function Invoke-SingleTestParallel {
-            param([object]$Test, [string]$TestName, [int]$TestIndex, [bool]$ShowVerbose)
-            
+            param([object]$Test, [string]$TestName, [int]$TestIndex)
+
             $displayName = if ($Test.name) { $Test.name } else { "Test $TestIndex" }
             $assertionConfig = Get-AssertionConfig
-            
+
             # Get input
             $bicepFile = $Test.bicepFile
             $functionCall = $Test.functionCall
             $inputExpr = $Test.input
-            
+
             if ($bicepFile -and $functionCall) {
                 if (-not (Test-Path $bicepFile)) {
                     return @{ TestName = $TestName; TestIndex = $TestIndex; DisplayName = $displayName; Passed = $false; Error = "Bicep file not found: $bicepFile" }
@@ -681,13 +706,13 @@ function Invoke-TestsParallel {
             elseif (-not $inputExpr) {
                 return @{ TestName = $TestName; TestIndex = $TestIndex; DisplayName = $displayName; Passed = $false; Error = "Test must have either 'input' or 'bicepFile' + 'functionCall'" }
             }
-            
+
             # Find assertion
             $assertion = Find-AssertionInTest -Test $Test
             if (-not $assertion) {
                 return @{ TestName = $TestName; TestIndex = $TestIndex; DisplayName = $displayName; Passed = $false; Error = "Test must have an assertion (shouldBe, shouldContain, etc.)" }
             }
-            
+
             # Execute
             try {
                 $rawOutput = $inputExpr | bicep console 2>&1 | Out-String
@@ -696,14 +721,14 @@ function Invoke-TestsParallel {
             catch {
                 return @{ TestName = $TestName; TestIndex = $TestIndex; DisplayName = $displayName; Passed = $false; Error = $_.Exception.Message }
             }
-            
+
             # Evaluate assertion
             $config = $assertionConfig[$assertion.Type]
             $normalizedExpected = if ($config.NoExpectedValue) { $null } else { ConvertTo-NormalizedOutput $assertion.Value }
-            
+
             try {
                 if ($config.ValidateFirst) {
-                    try { $null = "" -match $normalizedExpected } catch { 
+                    try { $null = "" -match $normalizedExpected } catch {
                         return @{ TestName = $TestName; TestIndex = $TestIndex; DisplayName = $displayName; Passed = $false; Error = "Invalid regex pattern: $normalizedExpected" }
                     }
                 }
@@ -712,21 +737,21 @@ function Invoke-TestsParallel {
                         return @{ TestName = $TestName; TestIndex = $TestIndex; DisplayName = $displayName; Passed = $false; Error = "Could not convert to numeric values`n    Actual: $actual" }
                     }
                 }
-                
+
                 $passed = & $config.Evaluate $actual $normalizedExpected
                 $failureMessage = if (-not $passed) { & $config.FormatFailure $normalizedExpected $actual } else { $null }
-                
+
                 return @{ TestName = $TestName; TestIndex = $TestIndex; DisplayName = $displayName; Passed = $passed; FailureMessage = $failureMessage; Actual = $actual }
             }
             catch {
                 return @{ TestName = $TestName; TestIndex = $TestIndex; DisplayName = $displayName; Passed = $false; Error = $_.Exception.Message }
             }
         }
-        
+
         # Process the test file
         $testName = [System.IO.Path]::GetFileNameWithoutExtension($testFile.FullName) -replace '\.bicep-test$', ''
         $testData = Get-Content $testFile.FullName -Raw | ConvertFrom-Json
-        
+
         # Helper to convert test data to standardized format
         function ConvertTo-TestObjectParallel {
             param([object]$TestData)
@@ -742,32 +767,32 @@ function Invoke-TestsParallel {
             }
             return [PSCustomObject]$test
         }
-        
+
         $tests = if ($testData.PSObject.Properties.Name -contains 'tests') {
             $testData.tests | ForEach-Object { ConvertTo-TestObjectParallel -TestData $_ }
         } else {
             @(ConvertTo-TestObjectParallel -TestData $testData)
         }
-        
+
         $results = @()
         for ($i = 0; $i -lt $tests.Count; $i++) {
-            $results += Invoke-SingleTestParallel -Test $tests[$i] -TestName $testName -TestIndex ($i + 1) -ShowVerbose $verboseMode
+            $results += Invoke-SingleTestParallel -Test $tests[$i] -TestName $testName -TestIndex ($i + 1)
         }
-        
+
         return @{
             TestName = $testName
             Description = $testData.description
             Results = $results
         }
     } -ThrottleLimit $ThrottleLimit
-    
+
     # Output results and collect all test results
     $allResults = @()
     foreach ($fileResult in $parallelResults) {
-        Write-TestFileResults -FileResult $fileResult -Quiet $Quiet -ShowVerbose $ShowVerbose
+        Write-TestResult -FileResult $fileResult -Quiet $Quiet
         $allResults += $fileResult.Results
     }
-    
+
     return $allResults
 }
 
@@ -780,7 +805,7 @@ Write-Host "Mode: $(if ($Parallel) { "Parallel (max $MaxParallelJobs jobs)" } el
 Write-Host ""
 
 # Validate prerequisites
-if (-not (Test-Prerequisites -TestDirectory $TestDir -ShowVerbose $VerboseOutput)) {
+if (-not (Test-Prerequisite -TestDirectory $TestDir)) {
     exit 1
 }
 

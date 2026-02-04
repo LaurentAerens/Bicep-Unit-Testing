@@ -1,0 +1,63 @@
+name: Code Quality & Security
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'framework/*.ps1'
+      - '.github/workflows/code-quality.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'framework/*.ps1'
+      - '.github/workflows/code-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  psscriptanalyzer:
+    name: PowerShell Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path ./framework -Recurse -ExcludeRule PSAvoidUsingWriteHost, PSReviewUnusedParameter
+          
+          if ($results) {
+            Write-Host "::error::PSScriptAnalyzer found $(($results | Measure-Object).Count) issue(s)"
+            $results | ForEach-Object {
+              Write-Host "::error file=$($_.ScriptPath),line=$($_.Line),col=$($_.Column)::$($_.RuleName): $($_.Message)"
+            }
+            exit 1
+          } else {
+            Write-Host "::notice::PSScriptAnalyzer: No issues found!"
+          }
+
+  summary:
+    name: Quality Check Summary
+    runs-on: ubuntu-latest
+    needs: [psscriptanalyzer]
+    if: always()
+
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.psscriptanalyzer.result }}" == "failure" ]]; then
+            echo "❌ Code quality checks failed"
+            exit 1
+          else
+            echo "✅ All code quality checks passed"
+          fi
