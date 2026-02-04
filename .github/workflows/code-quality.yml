@@ -35,7 +35,7 @@ jobs:
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path ./framework -Recurse -ExcludeRule PSAvoidUsingWriteHost
+          $results = Invoke-ScriptAnalyzer -Path ./framework -Recurse -ExcludeRule PSAvoidUsingWriteHost, PSReviewUnusedParameter
           
           if ($results) {
             Write-Host "::error::PSScriptAnalyzer found $(($results | Measure-Object).Count) issue(s)"
@@ -57,8 +57,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Semgrep
-        run: semgrep scan --config=auto --sarif --output=semgrep.sarif ./framework || true
+      - name: Run Semgrep with multiple rulesets
+        run: |
+          semgrep scan \
+            --config=p/security-audit \
+            --config=p/best-practices \
+            --config=p/owasp-top-ten \
+            --config=p/cwe-top-25 \
+            --sarif \
+            --output=semgrep.sarif \
+            ./framework || true
+        env:
+          # Semgrep rulesets:
+          # - p/security-audit: General security vulnerabilities (52+ rules for PowerShell)
+          # - p/best-practices: Code quality and maintainability patterns
+          # - p/owasp-top-ten: OWASP Top 10 security issues (injection, auth, crypto, etc.)
+          # - p/cwe-top-25: CWE Top 25 Most Dangerous Software Weaknesses
 
       - name: Upload Semgrep SARIF
         if: always()

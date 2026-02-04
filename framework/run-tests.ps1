@@ -607,12 +607,8 @@ function Invoke-TestsParallel {
     )
 
     # Export the script content for use in parallel runspaces
-    $scriptPath = $PSScriptRoot
-
     $parallelResults = $TestFiles | ForEach-Object -Parallel {
         $testFile = $_
-        $verboseMode = $using:ShowVerbose
-        $scriptDir = $using:scriptPath
 
         # Re-import necessary functions in parallel scope
         # (PowerShell parallel runspaces don't share function definitions)
