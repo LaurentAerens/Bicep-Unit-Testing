@@ -58,37 +58,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Semgrep with multiple rulesets
-        run: |
-          echo "Running Semgrep scan with rulesets:"
-          echo "  - p/security-audit (52+ PowerShell security rules)"
-          echo "  - p/best-practices (code quality patterns)"
-          echo "  - p/owasp-top-ten (injection, auth, crypto, etc.)"
-          echo "  - p/cwe-top-25 (dangerous weaknesses)"
-          echo ""
-          semgrep scan \
-            --config=p/security-audit \
-            --config=p/best-practices \
-            --config=p/owasp-top-ten \
-            --config=p/cwe-top-25 \
-            --json \
-            --output=semgrep-results.json \
-            ./framework || true
-          echo ""
-          echo "Scan results saved to semgrep-results.json"
+        run: semgrep scan --config=auto --config=p/security-audit --config=p/best-practices --config=p/owasp-top-ten --config=p/cwe-top-25 ./framework || true
 
-      - name: Convert Semgrep results to SARIF
+      - name: Generate SARIF for GitHub Security tab
         if: always()
-        run: |
-          if [ -f semgrep-results.json ]; then
-            semgrep scan \
-              --config=p/security-audit \
-              --config=p/best-practices \
-              --config=p/owasp-top-ten \
-              --config=p/cwe-top-25 \
-              --sarif \
-              --output=semgrep.sarif \
-              ./framework || true
-          fi
+        run: semgrep scan --config=auto --config=p/security-audit --config=p/best-practices --config=p/owasp-top-ten --config=p/cwe-top-25 --sarif --output=semgrep.sarif ./framework || true
 
       - name: Upload Semgrep SARIF
         if: always()
