@@ -67,12 +67,6 @@ jobs:
             --sarif \
             --output=semgrep.sarif \
             ./framework || true
-        env:
-          # Semgrep rulesets:
-          # - p/security-audit: General security vulnerabilities (52+ rules for PowerShell)
-          # - p/best-practices: Code quality and maintainability patterns
-          # - p/owasp-top-ten: OWASP Top 10 security issues (injection, auth, crypto, etc.)
-          # - p/cwe-top-25: CWE Top 25 Most Dangerous Software Weaknesses
 
       - name: Upload Semgrep SARIF
         if: always()
