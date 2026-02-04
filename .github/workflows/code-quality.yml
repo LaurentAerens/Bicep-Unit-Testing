@@ -47,14 +47,6 @@ jobs:
             Write-Host "::notice::PSScriptAnalyzer: No issues found!"
           }
 
-      - name: Upload SARIF results
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: psscriptanalyzer-results.sarif
-          category: psscriptanalyzer
-        continue-on-error: true
-
   semgrep:
     name: Semgrep Security Scan
     runs-on: ubuntu-latest
