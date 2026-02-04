@@ -184,8 +184,7 @@ function Get-TestInput {
         Resolves the input expression for a test (inline or from bicep file)
     #>
     param(
-        [object]$Test,
-        [bool]$ShowVerbose
+        [object]$Test
     )
     
     $bicepFile = $Test.bicepFile
@@ -273,7 +272,7 @@ function ConvertTo-TestResult {
         TestIndex = $TestIndex
         DisplayName = $DisplayName
         Passed = $Passed
-        Error = $Error
+        Error = $ErrorMsg
         FailureMessage = $FailureMessage
         AssertionType = $AssertionType
         Actual = $Actual
@@ -458,22 +457,21 @@ function Write-TestResult {
     }
 }
 
-function Write-TestFileResults {
+function Write-TestResult {
     <#
     .SYNOPSIS
         Writes all results for a test file to the console
     #>
     param(
         [object]$FileResult,
-        [bool]$Quiet,
-        [bool]$ShowVerbose
+        [bool]$Quiet
     )
     
     if (-not $Quiet) {
         Write-Host "`nRunning test: $($FileResult.TestName)" -ForegroundColor Yellow
     }
     
-    if ($ShowVerbose -and $FileResult.Description) {
+    if ($FileResult.Description) {
         Write-Host "  Description: $($FileResult.Description)"
     }
     
@@ -483,7 +481,38 @@ function Write-TestFileResults {
     }
     
     foreach ($result in $FileResult.Results) {
-        Write-TestResult -Result $result -Quiet $Quiet
+        Write-SingleTestResult -Result $result -Quiet $Quiet
+    }
+}
+
+function Write-SingleTestResult {
+    <#
+    .SYNOPSIS
+        Writes a single test result to the console
+    #>
+    param(
+        [object]$Result,
+        [bool]$Quiet
+    )
+    
+    if ($Quiet) { return }
+    
+    $testNum = $Result.TestIndex
+    $testName = $Result.DisplayName
+    
+    Write-Host "    [$testNum] $testName"
+    
+    if ($Result.Passed) {
+        Write-Host "      ✓ PASSED" -ForegroundColor Green
+    }
+    else {
+        Write-Host "      ✗ FAILED" -ForegroundColor Red
+        if ($Result.FailureMessage) {
+            Write-Host "        $($Result.FailureMessage)" -ForegroundColor Red
+        }
+        if ($Result.Error) {
+            Write-Host "        Error: $($Result.Error)" -ForegroundColor Red
+        }
     }
 }
 
@@ -512,7 +541,7 @@ function Write-TestSummary {
 
 #region Main Execution
 
-function Test-Prerequisites {
+function Test-Prerequisite {
     <#
     .SYNOPSIS
         Validates that all prerequisites are met before running tests
@@ -558,7 +587,7 @@ function Invoke-TestsSequential {
     
     foreach ($testFile in $TestFiles) {
         $fileResult = Invoke-TestFile -TestFile $testFile.FullName -ShowVerbose $ShowVerbose
-        Write-TestFileResults -FileResult $fileResult -Quiet $Quiet -ShowVerbose $ShowVerbose
+        Write-TestResult -FileResult $fileResult -Quiet $Quiet
         $allResults += $fileResult.Results
     }
     
@@ -764,7 +793,7 @@ function Invoke-TestsParallel {
     # Output results and collect all test results
     $allResults = @()
     foreach ($fileResult in $parallelResults) {
-        Write-TestFileResults -FileResult $fileResult -Quiet $Quiet -ShowVerbose $ShowVerbose
+        Write-TestResult -FileResult $fileResult -Quiet $Quiet
         $allResults += $fileResult.Results
     }
     
@@ -780,7 +809,7 @@ Write-Host "Mode: $(if ($Parallel) { "Parallel (max $MaxParallelJobs jobs)" } el
 Write-Host ""
 
 # Validate prerequisites
-if (-not (Test-Prerequisites -TestDirectory $TestDir -ShowVerbose $VerboseOutput)) {
+if (-not (Test-Prerequisite -TestDirectory $TestDir)) {
     exit 1
 }
 

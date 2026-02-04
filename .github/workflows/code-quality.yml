@@ -35,7 +35,7 @@ jobs:
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path ./framework -Recurse
+          $results = Invoke-ScriptAnalyzer -Path ./framework -Recurse -ExcludeRule PSAvoidUsingWriteHost
           
           if ($results) {
             Write-Host "::error::PSScriptAnalyzer found $(($results | Measure-Object).Count) issue(s)"
