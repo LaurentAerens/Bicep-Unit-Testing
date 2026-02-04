@@ -59,14 +59,36 @@ jobs:
 
       - name: Run Semgrep with multiple rulesets
         run: |
+          echo "Running Semgrep scan with rulesets:"
+          echo "  - p/security-audit (52+ PowerShell security rules)"
+          echo "  - p/best-practices (code quality patterns)"
+          echo "  - p/owasp-top-ten (injection, auth, crypto, etc.)"
+          echo "  - p/cwe-top-25 (dangerous weaknesses)"
+          echo ""
           semgrep scan \
             --config=p/security-audit \
             --config=p/best-practices \
             --config=p/owasp-top-ten \
             --config=p/cwe-top-25 \
-            --sarif \
-            --output=semgrep.sarif \
+            --json \
+            --output=semgrep-results.json \
             ./framework || true
+          echo ""
+          echo "Scan results saved to semgrep-results.json"
+
+      - name: Convert Semgrep results to SARIF
+        if: always()
+        run: |
+          if [ -f semgrep-results.json ]; then
+            semgrep scan \
+              --config=p/security-audit \
+              --config=p/best-practices \
+              --config=p/owasp-top-ten \
+              --config=p/cwe-top-25 \
+              --sarif \
+              --output=semgrep.sarif \
+              ./framework || true
+          fi
 
       - name: Upload Semgrep SARIF
         if: always()
